@@ -9,7 +9,8 @@ Many people told me that an automatic update of the loaders isn't possible or, a
 Too complex is that thing, they said... So, I wrote this script to demonstrate the opposite.
 
 I admit, I put some serious limitations in this code, for I wanted to stay in the fields I know well.
-**It updates nothing but tells what it would do**
+
+**It updates nothing but tells what it would do.**
 
 What it does handle:
 - Check all the disks reported by the system (case of mirror disks).
