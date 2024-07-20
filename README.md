@@ -5,7 +5,7 @@ This sh script is a proof of concept that an automatic update of FreeBSD loaders
 Update of the loaders is linked to the evolution of zfs features, but not only.
 Even if no new features are added and the zpool(s) not upgraded, from time to time, some weird problems arise if you don't update.
 Not to speak about the correction of the loaders bugs, which concerns also the systems with ufs on root.
-Many people told me that an automatic update of the loaders isn't possible or, at least, not desirable.
+Some people told me that an automatic update of the loaders isn't possible or, at least, not desirable.
 Too complex is that thing, they said... So, I wrote this script to demonstrate the opposite.
 
 I admit, I put some serious limitations in this code, for I wanted to stay in the fields I know well.
