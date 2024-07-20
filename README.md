@@ -19,7 +19,7 @@ What it does handle:
 - Checks for the presence of EFI loaders both in efi/boot and efi/freebsd.
 - Recognizes (or try) to identify FreeBSD EFI loaders and would update only them.
 - Doesn't change the name of EFI FreeBSD loaders (case where the admin would have changed the default ones).
-- In case of freebsd-boot partition, checks the coherence beetween its content and the root file system.
+- In case of freebsd-boot partition, checks the coherence between its content and the root file system.
 
 What it doesn't handle:
 - Other architecture than amd64.
