@@ -1,0 +1,272 @@
+#!/bin/sh
+
+#### Functions ####
+
+# CheckSourceFile SourceFile
+CheckSourceFile()
+{
+	local r
+	#SL var is global
+	SL="$1" 
+
+	if [ -e "$SL" ]; then
+		echo "The file $SL exists on your system."
+		#echo -n 'Use that file as a loader source (Enter=yes, or enter another file)? '
+		lok=true
+	else
+		echo "Cannot find $SL on your system!"
+		echo -n 'Please give the path of the source loader you want: '
+		lok=false
+	fi
+	if !($lok); then
+		read r
+	fi
+	if [ -n $r ] && ! [ -e $r ]; then
+		echo 'The provided loader does not exists. Exiting.'
+		exit 1
+	fi
+	if !($lok) && [ -z "$r" ]; then
+		echo 'You must provide a loader. Exiting.'	
+		exit 1
+	fi
+	if [ -n "$r" ]; then
+		SL="$r"
+	fi
+}
+
+# CopyEfiLoader SourceFile WorkingPath DestFileNameByDefault
+CopyEfiLoader()
+{
+	local ln n c wp s
+	s="$1"
+	wp="$2"
+	c="$3"
+
+	if [ -d "$wp" ]; then
+		# List the files present in the working path
+		ln=$(ls "$wp")
+		if [ -n "$ln" ]; then
+			for n in $ln; do
+				# Check if the file is a FreeBSD loader
+				if [ $(cat "$wp/$n" | grep -c FreeBSD) -gt 0 ]; then
+					# We choose the first file name that is a FreeBSD loader
+					c="$n"
+					break
+				fi
+			done
+		fi
+		# If no FreeBSD loader file has been found, we use the default name
+		echo "Would copy $s to $wp/$c."
+		UpEFI=$(($UpEFI+1))
+	fi
+}
+
+# EfiUpdate SourceFile TargetPartition MountedDest
+EfiUpdate()
+{
+	local s p m mt
+	s=$1
+	p=$2
+	m=$3
+	mt=false
+
+	# If m is empty, the target partition isn't mounted, we must mount it
+	if [ -z "$m" ]; then
+		mount -t msdosfs /dev/$p /mnt
+		if [ $? -ne 0 ]; then
+			echo "Cannot mount $p so cannot update its loader(s)."
+			Err=$(($Err+1))
+			return
+		fi
+		mt=true
+		m="/mnt"
+	fi
+
+	CopyEfiLoader "$s" "$m/efi/freebsd" loader.efi
+	CopyEfiLoader "$s" "$m/efi/boot" bootx64.efi
+	if ($mt); then
+		umount /mnt
+	fi	
+}
+
+#### Main ####
+
+echo
+echo 'This utility aims to show that automatic update of FreeBSD loaders is possible.'
+echo 'It works only on amd64 arch and disks with GPT scheme.'
+echo 'It tells what it would do but changes nothing.'
+echo 'It may need to run as root for mounting the efi partitions.'
+read -p 'Press Enter to start...' dummy
+echo
+
+a=$(sysctl hw.machine)
+if ! [ "$a"=="amd64" ]; then
+	echo 'This utility works only with amd64 architecture. Exiting.'
+	echo
+	return 1
+fi
+
+# Get the list of disks
+LD=$(sysctl -n kern.disks)
+if [ -z "$LD" ]; then
+	echo 'No disk has been detected. Exiting.'
+	return 1
+fi
+
+# Search for efi & freebsd-boot partitions
+GPT=false
+for d in $LD; do
+	# To avoid an error if the disk is amovible and absent (cdrom)
+	gpart show $d > /dev/null 2>&1
+
+	if [ $? -eq 0 ]; then
+		gp=$(gpart show $d)
+		if [ "$(echo $gp | awk '{ print $5 }')" = "GPT" ]; then
+
+			# It's a GPT scheme
+			GPT=true
+
+			# Looking for a efi type partition
+			p=$(gpart show -p $d | grep efi | awk '{ print $3 }')
+			if [ -n "$p" ]; then
+				EFIP="$EFIP $p"
+			fi
+			unset p
+
+			# Looking for a freebsd-boot type partition
+			pi=$(gpart show $d | grep freebsd-boot | awk '{ print $3 }')
+			if [ -n "$pi" ]; then
+				# BIOSD lists the disks and BIOSI, the corresponding indexes
+				BIOSD="$BIOSD $d"
+				BIOSI="$BIOSI $pi"
+			fi
+			unset pi		
+		fi
+	fi
+done
+
+if !($GPT); then
+	echo 'This machine has no disk with GPT scheme. Exiting.'
+	echo
+	return 1
+fi
+
+Err=0
+UpEFI=0
+UpBIOS=0
+if [ -n "$EFIP" ]; then
+	echo 'One or more efi partition(s) have been found.'
+	CheckSourceFile /boot/loader.efi
+	echo
+	
+	for p in $EFIP; do
+		# Try to see if the efi partition is already mounted
+		# (typically in /boot/efi)
+
+		# Search first by the geom name (e.g. ada0p1)
+		m=$(mount -p | grep $p | awk '{ print $2 }')
+
+		# If not found, try by the label name (e.g. efiboot0)
+		if [ -z "$m" ]; then
+			lp=$(gpart show -pl | grep $p | awk '{ print $4 }')
+			m=$(mount -p | grep $lp | awk '{ print $2 }')
+		fi
+		if [ -n "$m" ]; then
+			echo "Efi partition $p is already mounted in $m."
+		else
+			echo "Mounting $p in /mnt..."
+		fi	
+		EfiUpdate "$SL" "$p" "$m"
+		unset m	
+	done
+	echo
+fi
+
+if [ -n "$BIOSD" ]; then
+
+	echo 'One or more freebsd-boot partition(s) have been found.'
+	CheckSourceFile /boot/pmbr
+	Spmbr="$SL"
+	CheckSourceFile /boot/gptboot
+	Sgptboot="$SL"
+	CheckSourceFile /boot/gptzfsboot
+	Sgptzfsboot="$SL"
+	echo 
+
+	# Check the root file system
+	rfs=$(mount -p | grep "	/	" | awk '{ print $3 }')
+	if [ -n "$rfs" ]; then
+		echo "The root file system is $rfs."
+	else
+		echo 'Cannot determine the root file system.'
+	fi
+	echo
+
+	i=1
+	for d in $BIOSD; do
+		echo "Examining $d..."
+		
+		# Retrieving the corresponding partition index in BIOSI
+		index=$(eval "echo \$BIOSI | awk '{ print \$$i }'")
+		i=$((i+1))
+		unset SL
+
+		# Try to determine whether the partition content is gptboot or gptzfsboot
+		p="/dev/${d}p$index"
+		cat $p > /dev/null
+		if [ $? -ne 0 ]; then
+			echo "Error during access to $p. Won't update these loaders."
+			Err=$(($Err+1))
+			continue
+		fi
+		r1="$(cat $p | grep -c ZFS)"
+		r2="$(cat $p | grep -c zfs)"
+		if [ $r1 -gt 0 ] && [ $r2 -gt 0 ]; then
+			SL="$Sgptzfsboot"
+			nfs="zfs"
+		fi
+		if [ $r1 -eq 0 ] && [ $r2 -eq 0 ]; then
+			SL="$Sgptboot"
+			nfs="ufs"
+		fi
+		if [ -z "$SL" ]; then
+			echo "Cannot determine if $p needs gptboot or zfsgptboot type loader!"
+			echo 'Do nothing for this partition.'
+			Err=$(($Err+1))
+		else
+			if [ -n "$rfs" ] && ! [ "$rfs" = "$nfs" ]; then
+				echo 'There is a mismatch beetween the root fs and the current loader.'
+				echo "Root fs: $rfs / Partition has: $nfs."
+				echo "--> No loader update on $p."
+				Err=$(($Err+1))
+				continue
+			fi
+			echo "Would run: gpart bootcode -b $Spmbr -p $SL -i $index $d"
+			UpBIOS=$(($UpBIOS+1))
+		fi
+	done
+fi
+
+echo
+echo '-------------------------------'
+
+if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
+	echo 'Did find no efi partition and no freebsd-boot partition.'
+	echo 'Nothing seems updatable.'
+else
+	if [ $UpEFI -eq 0 ] && [ $UpBIOS -eq 0 ]; then
+		echo 'One or more target partition(s) have been found but no loader seems to be updatable.'
+	else
+		if [ $UpEFI -gt 0 ]; then
+			echo "Updatable EFI loader: $UpEFI"
+		fi
+		if [ $UpBIOS -gt 0 ]; then
+			echo "Updatable BIOS loader: $UpBIOS"
+		fi
+		if [ $Err -gt 0 ]; then
+			echo "One or more loaders are updatable, but encountered $Err error(s)."
+		fi
+	fi
+fi
+
+echo '-------------------------------'
