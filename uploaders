@@ -110,6 +110,7 @@ fi
 LD=$(sysctl -n kern.disks)
 if [ -z "$LD" ]; then
 	echo 'No disk has been detected. Exiting.'
+	echo
 	return 1
 fi
 
