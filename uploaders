@@ -48,7 +48,7 @@ CopyEfiLoader()
 		if [ -n "$ln" ]; then
 			for n in $ln; do
 				# Check if the file is a FreeBSD loader
-				if [ $(grep -c FreeBSD "$wp/$n") -gt 0 ];
+				if [ $(grep -c FreeBSD "$wp/$n") -gt 0 ]; then
 					# We choose the first file name that is a FreeBSD loader
 					c="$n"
 					break
