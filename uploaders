@@ -48,7 +48,7 @@ CopyEfiLoader()
 		if [ -n "$ln" ]; then
 			for n in $ln; do
 				# Check if the file is a FreeBSD loader
-				if [ $(cat "$wp/$n" | grep -c FreeBSD) -gt 0 ]; then
+				if [ $(grep -c FreeBSD "$wp/$n") -gt 0 ];
 					# We choose the first file name that is a FreeBSD loader
 					c="$n"
 					break
@@ -214,14 +214,13 @@ if [ -n "$BIOSD" ]; then
 
 		# Try to determine whether the partition content is gptboot or gptzfsboot
 		p="/dev/${d}p$index"
-		cat $p > /dev/null
-		if [ $? -ne 0 ]; then
+		r1="$(grep -c ZFS $p)"
+		if [ $? -gt 1 ]; then
 			echo "Error during access to $p. Won't update these loaders."
 			Err=$(($Err+1))
 			continue
 		fi
-		r1="$(cat $p | grep -c ZFS)"
-		r2="$(cat $p | grep -c zfs)"
+		r2="$(grep -c zfs $p)"
 		if [ $r1 -gt 0 ] && [ $r2 -gt 0 ]; then
 			SL="$Sgptzfsboot"
 			nfs="zfs"
