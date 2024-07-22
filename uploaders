@@ -252,7 +252,7 @@ echo
 echo '-------------------------------'
 
 if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
-	echo 'Did find no efi partition and no freebsd-boot partition.'
+	echo 'Found no efi partition and no freebsd-boot partition.'
 	echo 'Nothing seems updatable.'
 else
 	if [ $UpEFI -eq 0 ] && [ $UpBIOS -eq 0 ]; then
