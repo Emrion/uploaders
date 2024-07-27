@@ -64,7 +64,7 @@ CopyEfiLoader()
 # EfiUpdate SourceFile TargetPartition MountedDest
 EfiUpdate()
 {
-	local s p m mt
+	local s p m mt cmd
 	s=$1
 	p=$2
 	m=$3
@@ -72,9 +72,11 @@ EfiUpdate()
 
 	# If m is empty, the target partition isn't mounted, we must mount it
 	if [ -z "$m" ]; then
-		mount -t msdosfs /dev/$p /mnt
+		cmd="mount -t msdosfs /dev/$p /mnt"
+		echo $cmd
+		eval "$cmd"
 		if [ $? -ne 0 ]; then
-			echo "Cannot mount $p so cannot update its loader(s)."
+			echo "Cannot mount $p so cannot looking for its loader(s)."
 			Err=$(($Err+1))
 			return
 		fi
@@ -174,8 +176,6 @@ if [ -n "$EFIP" ]; then
 		fi
 		if [ -n "$m" ]; then
 			echo "Efi partition $p is already mounted in $m."
-		else
-			echo "Mounting $p in /mnt..."
 		fi	
 		EfiUpdate "$SL" "$p" "$m"
 		unset m	
@@ -249,6 +249,7 @@ fi
 
 echo
 echo '-------------------------------'
+echo "Your current boot method is $(sysctl -n machdep.bootmethod)."
 
 if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
 	echo 'Found no efi partition and no freebsd-boot partition.'
