@@ -46,7 +46,7 @@ CopyEfiLoader()
 		# List the files present in the working path
 		ln=$(ls "$wp")
 		if [ -n "$ln" ]; then
-			for n in "$ln"; do
+			for n in $ln; do
 				# Check if the file is a FreeBSD loader
 				if [ "$(grep -c FreeBSD "$wp/$n")" -gt 0 ]; then
 					# We choose the first file name that is a FreeBSD loader
@@ -120,7 +120,7 @@ fi
 
 # Search for efi & freebsd-boot partitions
 GPT=false
-for d in "$LD"; do
+for d in $LD; do
 	# To avoid an error if the disk is amovible and absent (cdrom)
 	gpart show "$d" > /dev/null 2>&1
 
@@ -164,7 +164,7 @@ if [ -n "$EFIP" ]; then
 	CheckSourceFile /boot/loader.efi
 	echo
 	
-	for p in "$EFIP"; do
+	for p in $EFIP; do
 		# Try to see if the efi partition is already mounted
 		# (typically in /boot/efi)
 
@@ -206,7 +206,7 @@ if [ -n "$BIOSD" ]; then
 	echo
 
 	i=1
-	for d in "$BIOSD"; do
+	for d in $BIOSD; do
 		echo "Examining $d..."
 		
 		# Retrieving the corresponding partition index in BIOSI
