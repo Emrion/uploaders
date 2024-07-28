@@ -21,7 +21,7 @@ CheckSourceFile()
 	if !($lok); then
 		read r
 	fi
-	if [ -n $r ] && ! [ -e $r ]; then
+	if [ -n "$r" ] && ! [ -e "$r" ]; then
 		echo 'The provided loader does not exists. Exiting.'
 		exit 1
 	fi
@@ -104,14 +104,14 @@ read -p 'Press Enter to start...' dummy
 echo
 
 a=$(sysctl hw.machine)
-if ! [ "$a"=="amd64" ]; then
+if ! [ "$a" = "amd64" ]; then
 	echo 'This utility works only with amd64 architecture. Exiting.'
 	echo
 	return 1
 fi
 
 # Get the list of disks
-LD=$(sysctl -n kern.disks)
+LD="$(sysctl -n kern.disks)"
 if [ -z "$LD" ]; then
 	echo 'No disk has been detected. Exiting.'
 	echo
@@ -124,7 +124,7 @@ for d in $LD; do
 	# To avoid an error if the disk is amovible and absent (cdrom)
 	gpart show $d > /dev/null 2>&1
 
-	if [ $? -eq 0 ]; then
+	if [ "$?" -eq 0 ]; then
 		gp=$(gpart show $d)
 		if [ "$(echo $gp | awk '{ print $5 }')" = "GPT" ]; then
 
@@ -132,14 +132,14 @@ for d in $LD; do
 			GPT=true
 
 			# Looking for a efi type partition
-			p=$(gpart show -p $d | grep efi | awk '{ print $3 }')
+			p="$(gpart show -p $d | grep efi | awk '{ print $3 }')"
 			if [ -n "$p" ]; then
 				EFIP="$EFIP $p"
 			fi
 			unset p
 
 			# Looking for a freebsd-boot type partition
-			pi=$(gpart show $d | grep freebsd-boot | awk '{ print $3 }')
+			pi="$(gpart show $d | grep freebsd-boot | awk '{ print $3 }')"
 			if [ -n "$pi" ]; then
 				# BIOSD lists the disks and BIOSI, the corresponding indexes
 				BIOSD="$BIOSD $d"
@@ -169,12 +169,12 @@ if [ -n "$EFIP" ]; then
 		# (typically in /boot/efi)
 
 		# Search first by the geom name (e.g. ada0p1)
-		m=$(mount -p | grep $p | awk '{ print $2 }')
+		m="$(mount -p | grep $p | awk '{ print $2 }')"
 
 		# If not found, try by the label name (e.g. efiboot0)
 		if [ -z "$m" ]; then
-			lp=$(gpart show -pl | grep $p | awk '{ print $4 }')
-			m=$(mount -p | grep $lp | awk '{ print $2 }')
+			lp="$(gpart show -pl | grep $p | awk '{ print $4 }')"
+			m="$(mount -p | grep $lp | awk '{ print $2 }')"
 		fi
 		if [ -n "$m" ]; then
 			echo "Efi partition $p is already mounted in $m."
@@ -197,7 +197,7 @@ if [ -n "$BIOSD" ]; then
 	echo 
 
 	# Check the root file system
-	rfs=$(mount -p | grep "	/	" | awk '{ print $3 }')
+	rfs="$(mount -p | grep "	/	" | awk '{ print $3 }')"
 	if [ -n "$rfs" ]; then
 		echo "The root file system is $rfs."
 	else
@@ -217,17 +217,17 @@ if [ -n "$BIOSD" ]; then
 		# Try to determine whether the partition content is gptboot or gptzfsboot
 		p="/dev/${d}p$index"
 		r1="$(grep -c ZFS $p)"
-		if [ $? -gt 1 ]; then
+		if [ "$?" -gt 1 ]; then
 			echo "Error during access to $p. Won't update these loaders."
 			Err=$(($Err+1))
 			continue
 		fi
 		r2="$(grep -c zfs $p)"
-		if [ $r1 -gt 0 ] && [ $r2 -gt 0 ]; then
+		if [ "$r1" -gt 0 ] && [ "$r2" -gt 0 ]; then
 			SL="$Sgptzfsboot"
 			nfs="zfs"
 		fi
-		if [ $r1 -eq 0 ] && [ $r2 -eq 0 ]; then
+		if [ "$r1" -eq 0 ] && [ "$r2" -eq 0 ]; then
 			SL="$Sgptboot"
 			nfs="ufs"
 		fi
@@ -236,7 +236,7 @@ if [ -n "$BIOSD" ]; then
 			echo 'Do nothing for this partition.'
 			Err=$(($Err+1))
 		else
-			if [ -n "$rfs" ] && ! [ "$rfs" = "$nfs" ]; then
+			if [ -n "$rfs" ] && ! [ "$rfs"="$nfs" ]; then
 				echo 'There is a mismatch between the root fs and the current loader.'
 				echo "Root fs: $rfs / Partition has: $nfs."
 				echo "--> No loader update on $p."
@@ -257,16 +257,16 @@ if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
 	echo 'Found no efi partition and no freebsd-boot partition.'
 	echo 'Nothing seems updatable.'
 else
-	if [ $UpEFI -eq 0 ] && [ $UpBIOS -eq 0 ]; then
+	if [ "$UpEFI" -eq 0 ] && [ "$UpBIOS" -eq 0 ]; then
 		echo 'One or more target partition(s) have been found but no loader seems to be updatable.'
 	else
-		if [ $UpEFI -gt 0 ]; then
+		if [ "$UpEFI" -gt 0 ]; then
 			echo "Updatable EFI loader: $UpEFI"
 		fi
-		if [ $UpBIOS -gt 0 ]; then
+		if [ "$UpBIOS" -gt 0 ]; then
 			echo "Updatable BIOS loader: $UpBIOS"
 		fi
-		if [ $Err -gt 0 ]; then
+		if [ "$Err" -gt 0 ]; then
 			echo "One or more loaders are updatable, but encountered $Err error(s)."
 		fi
 	fi
