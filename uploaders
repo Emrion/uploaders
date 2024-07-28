@@ -73,7 +73,7 @@ EfiUpdate()
 	# If m is empty, the target partition isn't mounted, we must mount it
 	if [ -z "$m" ]; then
 		cmd="mount -t msdosfs /dev/$p /mnt"
-		echo $cmd
+		echo "$cmd"
 		eval "$cmd"
 		if [ $? -ne 0 ]; then
 			echo "Cannot mount $p so cannot looking for its loader(s)."
@@ -88,7 +88,7 @@ EfiUpdate()
 	CopyEfiLoader "$s" "$m/efi/boot" bootx64.efi
 	if ($mt); then
 		cmd='umount /mnt'
-		echo $cmd
+		echo "$cmd"
 		eval "$cmd"
 	fi	
 }
@@ -122,10 +122,10 @@ fi
 GPT=false
 for d in $LD; do
 	# To avoid an error if the disk is amovible and absent (cdrom)
-	gpart show $d > /dev/null 2>&1
+	gpart show "$d" > /dev/null 2>&1
 
 	if [ "$?" -eq 0 ]; then
-		gp=$(gpart show $d)
+		gp="$(gpart show $d)"
 		if [ "$(echo $gp | awk '{ print $5 }')" = "GPT" ]; then
 
 			# It's a GPT scheme
@@ -236,7 +236,7 @@ if [ -n "$BIOSD" ]; then
 			echo 'Do nothing for this partition.'
 			Err=$(($Err+1))
 		else
-			if [ -n "$rfs" ] && ! [ "$rfs"="$nfs" ]; then
+			if [ -n "$rfs" ] && ! [ "$rfs" = "$nfs" ]; then
 				echo 'There is a mismatch between the root fs and the current loader.'
 				echo "Root fs: $rfs / Partition has: $nfs."
 				echo "--> No loader update on $p."
