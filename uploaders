@@ -46,9 +46,9 @@ CopyEfiLoader()
 		# List the files present in the working path
 		ln=$(ls "$wp")
 		if [ -n "$ln" ]; then
-			for n in $ln; do
+			for n in "$ln"; do
 				# Check if the file is a FreeBSD loader
-				if [ $(grep -c FreeBSD "$wp/$n") -gt 0 ]; then
+				if [ "$(grep -c FreeBSD "$wp/$n")" -gt 0 ]; then
 					# We choose the first file name that is a FreeBSD loader
 					c="$n"
 					break
@@ -65,9 +65,9 @@ CopyEfiLoader()
 EfiUpdate()
 {
 	local s p m mt cmd
-	s=$1
-	p=$2
-	m=$3
+	s="$1"
+	p="$2"
+	m="$3"
 	mt=false
 
 	# If m is empty, the target partition isn't mounted, we must mount it
@@ -75,13 +75,13 @@ EfiUpdate()
 		cmd="mount -t msdosfs /dev/$p /mnt"
 		echo "$cmd"
 		eval "$cmd"
-		if [ $? -ne 0 ]; then
+		if [ "$?" -ne 0 ]; then
 			echo "Cannot mount $p so cannot looking for its loader(s)."
 			Err=$(($Err+1))
 			return
 		fi
 		mt=true
-		m="/mnt"
+		m='/mnt'
 	fi
 
 	CopyEfiLoader "$s" "$m/efi/freebsd" loader.efi
@@ -120,26 +120,26 @@ fi
 
 # Search for efi & freebsd-boot partitions
 GPT=false
-for d in $LD; do
+for d in "$LD"; do
 	# To avoid an error if the disk is amovible and absent (cdrom)
 	gpart show "$d" > /dev/null 2>&1
 
 	if [ "$?" -eq 0 ]; then
-		gp="$(gpart show $d)"
-		if [ "$(echo $gp | awk '{ print $5 }')" = "GPT" ]; then
+		gp="$(gpart show "$d")"
+		if [ "$(echo "$gp" | awk '{ print $5 }')" = "GPT" ]; then
 
 			# It's a GPT scheme
 			GPT=true
 
 			# Looking for a efi type partition
-			p="$(gpart show -p $d | grep efi | awk '{ print $3 }')"
+			p="$(gpart show -p "$d" | grep efi | awk '{ print $3 }')"
 			if [ -n "$p" ]; then
 				EFIP="$EFIP $p"
 			fi
 			unset p
 
 			# Looking for a freebsd-boot type partition
-			pi="$(gpart show $d | grep freebsd-boot | awk '{ print $3 }')"
+			pi="$(gpart show "$d" | grep freebsd-boot | awk '{ print $3 }')"
 			if [ -n "$pi" ]; then
 				# BIOSD lists the disks and BIOSI, the corresponding indexes
 				BIOSD="$BIOSD $d"
@@ -164,17 +164,17 @@ if [ -n "$EFIP" ]; then
 	CheckSourceFile /boot/loader.efi
 	echo
 	
-	for p in $EFIP; do
+	for p in "$EFIP"; do
 		# Try to see if the efi partition is already mounted
 		# (typically in /boot/efi)
 
 		# Search first by the geom name (e.g. ada0p1)
-		m="$(mount -p | grep $p | awk '{ print $2 }')"
+		m="$(mount -p | grep "$p" | awk '{ print $2 }')"
 
 		# If not found, try by the label name (e.g. efiboot0)
 		if [ -z "$m" ]; then
-			lp="$(gpart show -pl | grep $p | awk '{ print $4 }')"
-			m="$(mount -p | grep $lp | awk '{ print $2 }')"
+			lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
+			m="$(mount -p | grep "$lp" | awk '{ print $2 }')"
 		fi
 		if [ -n "$m" ]; then
 			echo "Efi partition $p is already mounted in $m."
@@ -206,7 +206,7 @@ if [ -n "$BIOSD" ]; then
 	echo
 
 	i=1
-	for d in $BIOSD; do
+	for d in "$BIOSD"; do
 		echo "Examining $d..."
 		
 		# Retrieving the corresponding partition index in BIOSI
@@ -216,13 +216,13 @@ if [ -n "$BIOSD" ]; then
 
 		# Try to determine whether the partition content is gptboot or gptzfsboot
 		p="/dev/${d}p$index"
-		r1="$(grep -c ZFS $p)"
+		r1="$(grep -c ZFS "$p")"
 		if [ "$?" -gt 1 ]; then
 			echo "Error during access to $p. Won't update these loaders."
 			Err=$(($Err+1))
 			continue
 		fi
-		r2="$(grep -c zfs $p)"
+		r2="$(grep -c zfs "$p")"
 		if [ "$r1" -gt 0 ] && [ "$r2" -gt 0 ]; then
 			SL="$Sgptzfsboot"
 			nfs="zfs"
