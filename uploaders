@@ -87,7 +87,9 @@ EfiUpdate()
 	CopyEfiLoader "$s" "$m/efi/freebsd" loader.efi
 	CopyEfiLoader "$s" "$m/efi/boot" bootx64.efi
 	if ($mt); then
-		umount /mnt
+		cmd='umount /mnt'
+		echo $cmd
+		eval "$cmd"
 	fi	
 }
 
