@@ -126,7 +126,7 @@ for d in "$LD"; do
 
 	if [ "$?" -eq 0 ]; then
 		gp="$(gpart show "$d")"
-		if [ "$(echo "$gp" | awk '{ print $5 }')" = "GPT" ]; then
+		if [ "$(echo $gp | awk '{ print $5 }')" = "GPT" ]; then
 
 			# It's a GPT scheme
 			GPT=true
