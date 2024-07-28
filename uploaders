@@ -103,7 +103,7 @@ echo 'It may need to run as root for mounting the efi partitions.'
 read -p 'Press Enter to start...' dummy
 echo
 
-a=$(sysctl hw.machine)
+a="$(sysctl -n hw.machine)"
 if ! [ "$a" = "amd64" ]; then
 	echo 'This utility works only with amd64 architecture. Exiting.'
 	echo
