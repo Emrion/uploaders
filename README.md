@@ -20,11 +20,13 @@ What it does handle:
 - Recognizes (or try) to identify FreeBSD EFI loaders and would update only them.
 - Doesn't change the name of EFI FreeBSD loaders (case where the admin would have changed the default ones).
 - In case of freebsd-boot partition, checks the coherence between its content and the root file system.
+- Check if each detected loader may be updated or not (case where they are already up to date).
 
 What it doesn't handle:
 - Other architecture than amd64.
 - Disks that have other scheme than GPT (concerns mainly MBR scheme).
 - Not enough room in the efi partition to copy the loader (can arise with installed version 12 or before and never updated the loader).
+- Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987).
 - More than one efi or freebsd-boot partition a disk. It examines only the first efi and freebsd-boot partition.
 
 Please, try out this sh script on your machines and report back the encountered problems along with your detailed configuration.
