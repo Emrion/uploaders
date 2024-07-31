@@ -229,10 +229,13 @@ if [ -n "$BIOSD" ]; then
 				unset bcode
 			fi
 			cfbb="$(head -c "$Lgpt" /dev/"${d}"p"$index" | md5 -q)"
+			pcode="-p $SL -i $index "
 			if [ "$cfbb" = "$Gptmd5" ]; then
 				echo "The freebsd-boot partition ${d}p$index is up to date."
-			else		
-				echo "Would run: gpart bootcode ${bcode}-p $SL -i $index $d"
+				unset pcode
+			fi
+			if [ -n "$bcode" ] || [ -n "$pcode" ]; then		
+				echo "Would run: gpart bootcode $bcode$pcode$d"
 				UpBIOS=$((UpBIOS+1))	
 			fi
 		done
