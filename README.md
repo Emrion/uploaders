@@ -27,7 +27,7 @@ What it doesn't handle:
 - Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987).
 - More than one efi or freebsd-boot partition a disk. It examines only the first efi and freebsd-boot partition.
 
-
+---------------------------------------------------------------------------------------------------------------------------------------
 
 **There is a new feature!** I changed the name of the script: now, it's loaders-update.
 Ok, it's not a feature, I was just kidding.
