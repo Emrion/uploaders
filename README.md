@@ -26,9 +26,9 @@ What it doesn't handle:
 - Not enough room in the efi partition to copy the loader (can arise with installed version 12 or before and never updated the loader).
 - Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987).
 - More than one efi or freebsd-boot partition a disk. It examines only the first efi and freebsd-boot partition.
-- 
 
-There is a new feature! I changed the name of the script: now, it's loaders-update.
+
+**There is a new feature!** I changed the name of the script: now, it's loaders-update.
 Ok, it's not a feature, I was just kidding.
 
 Changes:
