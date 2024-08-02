@@ -35,6 +35,6 @@ Ok, it's not a feature, I was just kidding.
 Changes:
 - It's less verbose and sharper in the appreciation of the results, as asked by some people in the FreeBSD forum. That's not a feature as well.
 - There is no more a prompt to start the script; no feature again.
-- While by default, it updates nothing as before, just writting on the console the commands to type, there is a new mode: the **shoot-me** mode. If you write "shoot-me" as the first argument, it can execute these very commands but ask for confirmation before each one. This is THE feature.
+- While by default, it updates nothing as before, just writing on the console the commands to type, there is a new mode: the **shoot-me** mode. If you write "shoot-me" as the first argument, it can execute these very commands but ask for confirmation before each one. This is THE feature.
 
 I did this because I don't want to copy-paste commands. That's more cool to let the script does its job. Tried on several machines, VM and bare metal ones, without any problem.
