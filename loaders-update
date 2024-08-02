@@ -40,7 +40,6 @@ PossiblyRun()
 # CheckSourceFile SourceFile
 CheckSourceFile()
 {
-	local r
 	# SL var is global
 	SL="$1" 
 
