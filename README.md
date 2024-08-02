@@ -1,6 +1,6 @@
 # uploaders
 
-This sh script is a proof of concept that an automatic update of FreeBSD loaders is possible.
+This sh script is a proof of concept that an automatic update of FreeBSD loaders is possible, but it's also a tool that can help to update these loaders.
 
 Update of the loaders is linked to the evolution of zfs features, but not only.
 Even if no new features are added and the zpool(s) not upgraded, from time to time, some weird problems arise if you don't update.
@@ -9,8 +9,6 @@ Some people told me that an automatic update of the loaders isn't possible or, a
 Too complex is that thing, they said... So, I wrote this script to demonstrate the opposite.
 
 I admit, I put some serious limitations in this code, for I wanted to stay in the fields I know well.
-
-**It updates nothing but tells what it would do.**
 
 What it does handle:
 - Checks all the disks reported by the system (case of mirror disks).
@@ -28,5 +26,14 @@ What it doesn't handle:
 - Not enough room in the efi partition to copy the loader (can arise with installed version 12 or before and never updated the loader).
 - Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987).
 - More than one efi or freebsd-boot partition a disk. It examines only the first efi and freebsd-boot partition.
+- 
 
-Please, try out this sh script on your machines and report back the encountered problems along with your detailed configuration.
+There is a new feature! I changed the name of the script: now, it's loaders-update.
+Ok, it's not a feature, I was just kidding.
+
+Changes:
+- It's less verbose and sharper in the appreciation of the results, as asked by some people in the FreeBSD forum. That's not a feature as well.
+- There is no more a prompt to start the script; no feature again.
+- While by default, it updates nothing as before, just writting on the console the commands to type, there is a new mode: the **shoot-me** mode. If you write "shoot-me" as the first argument, it can execute these very commands but ask for confirmation before each one. This is THE feature.
+
+I did this because I don't want to copy-paste commands. That's more cool to let the script does its job. Tried on several machines, VM and bare metal ones, without any problem.
