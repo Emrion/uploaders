@@ -37,4 +37,4 @@ Changes:
 - There is no more a prompt to start the script; no feature again.
 - While by default, it updates nothing as before, just writing to the console the commands to type, there is a new mode: the **shoot-me** mode. If you write "shoot-me" as the first argument, it can execute these very commands but ask for confirmation before each one. This is THE feature.
 
-I did this because I don't want to copy-paste commands. That's more cool to let the script does its job. Tried on several machines, VM and bare metal ones, without any problem.
+I did this because I don't want to copy-paste commands. That's more cool to let the script do its job. Tried on several machines, VM and bare metal ones, without any problem.
