@@ -290,11 +290,37 @@ if [ -n "$BIOSD" ]; then
 		echo "Won't work on the freebsd-boot partition(s)."
 		Err=$((Err+1))
 	fi
+echo
 fi
 
-echo
+
 echo '-------------------------------'
-echo "Your current boot method is $(sysctl -n machdep.bootmethod)."
+BM=$(sysctl -n machdep.bootmethod)
+echo "Your current boot method is $BM."
+
+# Try to figure out partition & efi file on which the system is currently booting (EFI only)
+if [ "$BM" = "UEFI" ] && [ "$(id -u)" -eq 0 ]; then
+	cb="$(efibootmgr -v | grep +)"
+	echo -n 'Boot device: '
+
+	# It may be impossible for efibootmgr to convert to a unix path
+	efibootmgr -E > /dev/null 2>&1
+	if [ $? -gt 0 ]; then
+		# Just print the line reported by efibootmgr
+		echo $cb | cut -f3- -d ' '
+	else
+		# There, we can identify the boot partition
+		cbp="$(efibootmgr -E)"
+		# Case where the boot partition is a label, convert it to a geom partition
+		if [ -n "$(echo $cbp | grep gpt/)" ]; then
+			lp="$(echo $cbp | cut -f2 -d /)"
+			if [ -n "$lp" ]; then	
+				cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+			fi
+		fi
+		echo "$cbp $(echo $cb |cut -f2 -d /)"
+	fi
+fi
 
 if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
 	echo 'Found no efi partition and no freebsd-boot partition.'
