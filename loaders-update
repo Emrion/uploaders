@@ -52,30 +52,17 @@ CheckSourceFile()
 # CopyEfiLoader SourceFile WorkingPath DestFileNameByDefault
 CopyEfiLoader()
 {
-	local ln n c wp s md
+	local s wf md
 	s="$1"
-	wp="$2"
-	c="$3"
+	wf="$2"
 
-	if [ -d "$wp" ]; then
-		# List the files present in the working path
-		ln="$(ls "$wp")"
-		if [ -n "$ln" ]; then
-			for n in $ln; do
-				# Check if the file is a FreeBSD loader
-				if [ "$(grep -c FreeBSD "$wp/$n")" -gt 0 ]; then
-					# We choose the first file name that is a FreeBSD loader
-					c="$n"
-					break
-				fi
-			done
-		fi
-		# If no FreeBSD loader file has been found, we use the default name
-		md="$(md5 -q "$wp/$c")"
-		if [ "$md" = "$Efimd5" ]; then
-			echo "EFI loader $wp/$c is up to date."
+	# Check if the file is a FreeBSD loader
+	if [ "$(grep -c FreeBSD "$wf")" -gt 0 ]; then			
+		md="$(md5 -q "$wf")"
+		if  [ "$md" = "$Efimd5" ]; then
+			echo "EFI loader $wf is up to date."
 		else
-			PossiblyRun "cp $s $wp/$c" UpEFI mEFI
+			PossiblyRun "cp $s $wf" UpEFI mEFI
 		fi
 	fi
 }
@@ -102,8 +89,10 @@ EfiUpdate()
 		fi
 		mt=true
 	fi
-	CopyEfiLoader "$s" "$m/efi/freebsd" loader.efi
-	CopyEfiLoader "$s" "$m/efi/boot" bootx64.efi
+	lf="$(find "$m" -type f)"
+	for f in $lf; do
+		CopyEfiLoader "$s" "$f"
+	done
 	if ($mt); then
 		cmd="umount $m"
 		echo "$cmd"
