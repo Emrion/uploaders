@@ -49,7 +49,7 @@ CheckSourceFile()
 	fi
 }
 
-# CopyEfiLoader SourceFile WorkingPath DestFileNameByDefault
+# CopyEfiLoader SourceFile WorkingFile
 CopyEfiLoader()
 {
 	local s wf md
