@@ -56,7 +56,11 @@ CopyEfiLoader()
 	s="$1"
 	wf="$2"
 
-	# Check if the file is a FreeBSD loader
+	# Checks if it's an executable efi file
+	if [ -z "$(file -b "$wf" | grep PE32+)" ]; then
+		return
+	fi
+	# Checks if the file is a FreeBSD loader
 	if [ "$(grep -c FreeBSD "$wf")" -gt 0 ]; then			
 		md="$(md5 -q "$wf")"
 		if  [ "$md" = "$Efimd5" ]; then
