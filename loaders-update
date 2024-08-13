@@ -74,7 +74,7 @@ CopyEfiLoader()
 # EfiUpdate SourceFile TargetPartition MountedDest
 EfiUpdate()
 {
-	local s p m mt cmd
+	local s p m mt cmd e
 	s="$1"
 	p="$2"
 	m="$3"
@@ -85,10 +85,15 @@ EfiUpdate()
 		m='/mnt'
 		cmd="mount -t msdosfs /dev/$p $m"
 		echo "$cmd"
-		eval "$cmd"
-		if [ $? -ne 0 ]; then
+		e="$(eval "$cmd" 2>&1)"
+		if [ -n "$e" ]; then
+			echo $e
 			echo "Cannot mount $p, so cannot looking for its loader(s)."
-			Err=$((Err+1))
+			case "$e" in
+				*Invalid*) echo 'Is this partition formatted?'
+					   Ferr=$((Ferr+1));;
+				*) Err=$((Err+1));;
+			esac
 			return
 		fi
 		mt=true
@@ -349,7 +354,7 @@ else
 		fi
 	fi
 	if [ "$Ferr" -gt 0 ]; then
-		echo "Loader mismatch on $Ferr freebsd-boot partition(s)."
+		echo "$Ferr serious error(s) occured. See texts above."
 	fi
 fi
 
