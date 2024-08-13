@@ -24,7 +24,7 @@ What it doesn't handle:
 - Other architecture than amd64.
 - Disks that have other scheme than GPT (concerns mainly MBR scheme).
 - Not enough room in the efi partition to copy the loader (can arise with installed version 12 or before and never updated the loader).
-- Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987).
+- Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987). However, it tries to identify this case.
 - More than one efi or freebsd-boot partition a disk. It examines only the first efi and freebsd-boot partition.
 
 ---------------------------------------------------------------------------------------------------------------------------------------
