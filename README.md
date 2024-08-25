@@ -8,12 +8,12 @@ Not to speak about the correction of the loaders bugs, which concerns also the s
 Some people told me that an automatic update of the loaders isn't possible or, at least, not desirable.
 Too complex is that thing, they said... So, I wrote this script to demonstrate the opposite.
 
-It has two operating modes :
+It has two operating modes:  
 
-Usage: loaders-update mode
-mode can be:
-  show-me: just show the commands to type, change nothing.
-  shoot-me: may update the loader(s), but ask for confirmation before each one.
+Usage: loaders-update mode  
+mode can be:  
+  show-me: just show the commands to type, change nothing.  
+  shoot-me: may update the loader(s), but ask for confirmation before each one.  
 
 
 What it does handle:
