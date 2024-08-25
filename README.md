@@ -12,8 +12,8 @@ It has two operating modes:
 
 Usage: loaders-update mode  
 mode can be:  
-  show-me: just show the commands to type, change nothing.  
-  shoot-me: may update the loader(s), but ask for confirmation before each one.  
+  **show-me**: just show the commands to type, change nothing.  
+  **shoot-me**: may update the loader(s), but ask for confirmation before each one.  
 
 
 What it does handle:
