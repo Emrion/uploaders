@@ -14,8 +14,8 @@ Usage: loaders-update mode
 mode can be:  
 * **show-me**: just show the commands to type, change nothing.  
 * **shoot-me**: may update the loader(s), but ask for confirmation before each one.  
-
-
+  
+  
 What it does handle:
 - Checks all the disks reported by the system (case of mirror disks).
 - EFI and BIOS loaders.
