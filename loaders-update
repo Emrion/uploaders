@@ -3,6 +3,16 @@
 #### Functions & data ####
 
 readonly WMN='shoot-me'
+readonly SMN='show-me'
+
+Usage()
+{
+	echo "Usage: $0 mode"
+	echo "mode can be:"
+	echo "  $SMN: just show the commands to type, change nothing."
+	echo "  $WMN: may update the loader(s), but ask for confirmation before each one."
+	exit 0
+}
 
 TestRoot()
 {
@@ -111,22 +121,20 @@ EfiUpdate()
 
 #### Main ####
 
-echo 'This utility aims to show the automatic update of FreeBSD loaders is possible.'
+echo 'This utility helps to update the FreeBSD loaders.'
 SM=false
-if [ -n "$1" ]; then
-	if [ "$1" = "$WMN" ]; then
-		SM=true
+case "$1" in
+	"$WMN") SM=true
 		if [ "$(id -u)" -ne 0 ]; then 
 			echo "You need to be root to operate in $WMN mode."
 			return 1
-		fi
-	else
-		echo 'Required mode is unknown.'
-		return 1
-	fi
-fi
+		fi;;
+	"$SMN") ;;
+	*) Usage;;
+esac 
+
 if ! ($SM); then
-	echo 'Default mode: it tells what it would do but changes nothing.'
+	echo "$SMN mode: it tells what it would do but changes nothing."
 else
 	echo "$WMN mode selected!"
 fi
