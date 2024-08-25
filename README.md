@@ -8,7 +8,13 @@ Not to speak about the correction of the loaders bugs, which concerns also the s
 Some people told me that an automatic update of the loaders isn't possible or, at least, not desirable.
 Too complex is that thing, they said... So, I wrote this script to demonstrate the opposite.
 
-I admit, I put some serious limitations in this code, for I wanted to stay in the fields I know well.
+It has two operating modes :
+
+Usage: loaders-update mode
+mode can be:
+  show-me: just show the commands to type, change nothing.
+  shoot-me: may update the loader(s), but ask for confirmation before each one.
+
 
 What it does handle:
 - Checks all the disks reported by the system (case of mirror disks).
@@ -27,14 +33,3 @@ What it doesn't handle:
 - Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987). However, it tries to identify this case.
 - More than one efi or freebsd-boot partition a disk. It examines only the first efi and freebsd-boot partition.
 
----------------------------------------------------------------------------------------------------------------------------------------
-
-**There is a new feature!** I changed the name of the script: now, it's loaders-update.
-Ok, it's not a feature, I was just kidding.
-
-Changes:
-- It's less verbose and sharper in the appreciation of the results, as asked by some people in the FreeBSD forum. That's not a feature as well.
-- There is no more a prompt to start the script; no feature again.
-- While by default, it updates nothing as before, just writing to the console the commands to type, there is a new mode: the **shoot-me** mode. If you write "shoot-me" as the first argument, it can execute these very commands, but ask for confirmation before each one. This is THE feature.
-
-I did this because I don't want to copy-paste commands. That's more cool to let the script do its job. Tried on several machines, VM and bare metal ones, without any problem.
