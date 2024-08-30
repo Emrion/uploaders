@@ -121,6 +121,9 @@ EfiUpdate()
 
 #### Main ####
 
+# To avoid some errors related to grep
+unset GREP_OPTIONS
+
 echo 'This utility helps to update the FreeBSD loaders.'
 SM=false
 case "$1" in
