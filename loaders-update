@@ -212,11 +212,21 @@ if [ -n "$EFIP" ]; then
 		# (typically in /boot/efi)
 
 		# Search first by the geom name (e.g. ada0p1)
-		m="$(mount -p | grep "$p" | awk '{ print $2 }')"
+		m="$(mount -p)"
+		if [ $? -ne 0 ]; then
+			Err=$((Err+1))
+			break
+		fi
+ 		m="$(mount -p | grep "$p" | awk '{ print $2 }')"
 
 		# If not found, try by the label name (e.g. efiboot0)
 		if [ -z "$m" ]; then
-			lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
+			lp="$(gpart show -pl)"
+			if [ $? -ne 0 ]; then
+				Err=$((Err+1))
+				continue
+			fi 
+ 			lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
 			m="$(mount -p | grep "$lp" | awk '{ print $2 }')"
 		fi
 		if [ -n "$m" ]; then
