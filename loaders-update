@@ -21,6 +21,16 @@ TestRoot()
 	fi
 }
 
+# TestCmd cmd
+TestCmd()
+{
+	local r
+	r="$(eval "$1" 2>&1)"
+	if [ $? -ne 0 ]; then
+		echo "$r"
+	fi
+}
+
 # PossiblyRun CmdToExecute VarUpdatable VarUpdated
 PossiblyRun()
 {
@@ -95,7 +105,7 @@ EfiUpdate()
 		m='/mnt'
 		cmd="mount -t msdosfs /dev/$p $m"
 		echo "$cmd"
-		e="$(eval "$cmd" 2>&1)"
+		e="$(TestCmd "$cmd")"
 		if [ -n "$e" ]; then
 			echo $e
 			echo "Cannot mount $p, so cannot looking for its loader(s)."
@@ -145,6 +155,11 @@ fi
 echo
 
 a="$(sysctl -n hw.machine)"
+if [ $? -ne 0 ]; then
+	echo "Cannot get the architecture. Exiting."
+	echo
+	return 1
+fi
 if ! [ "$a" = "amd64" ]; then
 	echo 'This utility works only with amd64 architecture. Exiting.'
 	echo
@@ -153,6 +168,11 @@ fi
 
 # Get the list of disks
 LD="$(sysctl -n kern.disks)"
+if [ $? -ne 0 ]; then
+	echo "Cannot get the list of disks. Exiting."
+	echo
+	return 1
+fi
 if [ -z "$LD" ]; then
 	echo 'No disk has been detected. Exiting.'
 	echo
@@ -190,7 +210,7 @@ for d in $LD; do
 done
 
 if ! ($GPT); then
-	echo 'This machine has no disk with GPT scheme. Exiting.'
+	echo 'This machine seems to have no disk with GPT scheme. Exiting.'
 	echo
 	return 1
 fi
@@ -201,6 +221,11 @@ UpEFI=0
 UpBIOS=0
 mEFI=0
 mBIOS=0
+
+# Check some cmd to detect a problem with hardening system
+em=$(TestCmd "mount -p")
+egs=$(TestCmd "gpart show")
+
 if [ -n "$EFIP" ]; then
 	echo 'One or more efi partition(s) have been found.'
 	CheckSourceFile /boot/loader.efi
@@ -212,18 +237,18 @@ if [ -n "$EFIP" ]; then
 		# (typically in /boot/efi)
 
 		# Search first by the geom name (e.g. ada0p1)
-		m="$(mount -p)"
-		if [ $? -ne 0 ]; then
+		if [ -n "$em" ]; then
 			Err=$((Err+1))
+			echo "$em"
 			break
 		fi
  		m="$(mount -p | grep "$p" | awk '{ print $2 }')"
 
 		# If not found, try by the label name (e.g. efiboot0)
 		if [ -z "$m" ]; then
-			lp="$(gpart show -pl)"
-			if [ $? -ne 0 ]; then
+			if [ -n "$egs" ]; then
 				Err=$((Err+1))
+				echo "$egs"
 				continue
 			fi 
  			lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
@@ -241,73 +266,78 @@ fi
 if [ -n "$BIOSD" ]; then
 
 	echo 'One or more freebsd-boot partition(s) have been found.'
-
-	# Check the root file system
-	rfs="$(mount -p | grep "	/	" | awk '{ print $3 }')"
-	if [ -n "$rfs" ]; then
-		echo "The root file system is $rfs."
-		CheckSourceFile /boot/pmbr
-		Spmbr="$SL"
-		Pmbrmd5="$(head -c 446 "$Spmbr" | md5 -q)"
-		if [ "$rfs" = "zfs" ]; then
-			CheckSourceFile /boot/gptzfsboot
-		else	
-			CheckSourceFile /boot/gptboot
-		fi
-		# SL contains the loader file name suited for the system
-		Gptmd5="$(md5 -q "$SL")"
-		Lgpt="$(stat -f "%z" "$SL")"
-		echo
-
-		i=1
-		for d in $BIOSD; do
-			echo "Examining $d..."
-		
-			# Retrieving the corresponding partition index in BIOSI
-			index=$(eval "echo \$BIOSI | awk '{ print \$$i }'")
-			i=$((i+1))
-
-			# Try to determine whether the partition content is gptboot or gptzfsboot
-			p="/dev/${d}p$index"
-			r1="$(grep -c ZFS "$p")"
-			if [ $? -gt 1 ]; then
-				echo "Error during access to $p. Won't update these loaders."
-				Err=$((Err+1))
-				continue
-			fi
-			r2="$(grep -c zfs "$p")"
-			if [ "$r1" -gt 0 ] && [ "$r2" -gt 0 ]; then
-				nfs="zfs"
-			else
-				nfs="ufs"
-			fi
-			if ! [ "$rfs" = "$nfs" ]; then
-				echo 'There is a mismatch between the root fs and the current loader.'
-				echo "Root fs: $rfs / Partition has: $nfs."
-				echo "--> No loader update on $p."
-				Ferr=$((Ferr+1))
-				continue
-			fi
-			cpmbr="$(head -c 446 /dev/"$d" | md5 -q)"
-			bcode="-b $Spmbr "
-			if [ "$cpmbr" = "$Pmbrmd5" ]; then
-				echo 'The pmbr on this disk is up to date.'
-				unset bcode
-			fi
-			cfbb="$(head -c "$Lgpt" /dev/"${d}"p"$index" | md5 -q)"
-			pcode="-p $SL -i $index "
-			if [ "$cfbb" = "$Gptmd5" ]; then
-				echo "The freebsd-boot partition ${d}p$index is up to date."
-				unset pcode
-			fi
-			if [ -n "$bcode" ] || [ -n "$pcode" ]; then		
-				PossiblyRun "gpart bootcode $bcode$pcode$d" UpBIOS mBIOS
-			fi
-		done
-	else
-		echo 'Cannot determine the root file system.'
-		echo "Won't work on the freebsd-boot partition(s)."
+	
+	if [ -n "$em" ]; then
 		Err=$((Err+1))
+		echo "$em"
+	else
+		# Check the root file system
+		rfs="$(mount -p | grep "	/	" | awk '{ print $3 }')"
+		if [ -n "$rfs" ]; then
+			echo "The root file system is $rfs."
+			CheckSourceFile /boot/pmbr
+			Spmbr="$SL"
+			Pmbrmd5="$(head -c 446 "$Spmbr" | md5 -q)"
+			if [ "$rfs" = "zfs" ]; then
+				CheckSourceFile /boot/gptzfsboot
+			else	
+				CheckSourceFile /boot/gptboot
+			fi
+			# SL contains the loader file name suited for the system
+			Gptmd5="$(md5 -q "$SL")"
+			Lgpt="$(stat -f "%z" "$SL")"
+			echo
+
+			i=1
+			for d in $BIOSD; do
+				echo "Examining $d..."
+		
+				# Retrieving the corresponding partition index in BIOSI
+				index=$(eval "echo \$BIOSI | awk '{ print \$$i }'")
+				i=$((i+1))
+
+				# Try to determine whether the partition content is gptboot or gptzfsboot
+				p="/dev/${d}p$index"
+				r1="$(grep -c ZFS "$p")"
+				if [ $? -gt 1 ]; then
+					echo "Error during access to $p. Won't update these loaders."
+					Err=$((Err+1))
+					continue
+				fi
+				r2="$(grep -c zfs "$p")"
+				if [ "$r1" -gt 0 ] && [ "$r2" -gt 0 ]; then
+					nfs="zfs"
+				else
+					nfs="ufs"
+				fi
+				if ! [ "$rfs" = "$nfs" ]; then
+					echo 'There is a mismatch between the root fs and the current loader.'
+					echo "Root fs: $rfs / Partition has: $nfs."
+					echo "--> No loader update on $p."
+					Ferr=$((Ferr+1))
+					continue
+				fi
+				cpmbr="$(head -c 446 /dev/"$d" | md5 -q)"
+				bcode="-b $Spmbr "
+				if [ "$cpmbr" = "$Pmbrmd5" ]; then
+					echo 'The pmbr on this disk is up to date.'
+					unset bcode
+				fi
+				cfbb="$(head -c "$Lgpt" /dev/"${d}"p"$index" | md5 -q)"
+				pcode="-p $SL -i $index "
+				if [ "$cfbb" = "$Gptmd5" ]; then
+					echo "The freebsd-boot partition ${d}p$index is up to date."
+					unset pcode
+				fi
+				if [ -n "$bcode" ] || [ -n "$pcode" ]; then		
+					PossiblyRun "gpart bootcode $bcode$pcode$d" UpBIOS mBIOS
+				fi
+			done
+		else
+			echo 'Cannot determine the root file system.'
+			echo "Won't work on the freebsd-boot partition(s)."
+			Err=$((Err+1))
+		fi
 	fi
 echo
 fi
@@ -315,32 +345,41 @@ fi
 
 echo '-------------------------------'
 BM=$(sysctl -n machdep.bootmethod)
-echo "Your current boot method is $BM."
+if [ $? -ne 0 ]; then
+	echo "Cannot get the boot method."	
+else
+	echo "Your current boot method is $BM."
 
-# Try to figure out partition & efi file on which the system is currently booting (EFI only)
-if [ "$BM" = "UEFI" ] && [ "$(id -u)" -eq 0 ]; then
-	cb="$(efibootmgr -v | grep +)"
-	echo -n 'Boot device: '
+	# Try to figure out partition & efi file on which the system is currently booting (EFI only)
+	if [ "$BM" = "UEFI" ] && [ "$(id -u)" -eq 0 ]; then
+		eb="$(TestCmd efibootmgr)"
+		if [ -z "$eb" ]; then
+			cb="$(efibootmgr -v | grep +)"
+			echo -n 'Boot device: '
 
-	# It may be impossible for efibootmgr to convert to a unix path
-	efibootmgr -E > /dev/null 2>&1
-	if [ $? -gt 0 ]; then
-		# Just print the line reported by efibootmgr
-		echo $cb | cut -f3- -d ' '
-	else
-		# There, we can identify the boot partition
-		cbp="$(efibootmgr -E)"
-		# Case where the boot partition is a label, convert it to a geom partition
-		if [ -n "$(echo $cbp | grep gpt/)" ]; then
-			lp="$(echo $cbp | cut -f2 -d /)"
-			if [ -n "$lp" ]; then	
-				cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+			# It may be impossible for efibootmgr to convert to a unix path
+			efibootmgr -E > /dev/null 2>&1
+			if [ $? -gt 0 ]; then
+				# Just print the line reported by efibootmgr
+				echo $cb | cut -f3- -d ' '
+			else
+				# There, we can identify the boot partition
+				cbp="$(efibootmgr -E)"
+				# Case where the boot partition is a label, convert it to a geom partition
+				if [ -n "$(echo $cbp | grep gpt/)" ]; then
+					lp="$(echo $cbp | cut -f2 -d /)"
+					if [ -n "$lp" ] && [ -z "$egs" ]; then	
+						cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+					fi
+				fi
+				echo "$cbp $(echo $cb |cut -f2 -d /)"
 			fi
+		else
+			echo "Cannot use efibootmgr."
+			echo $eb
 		fi
-		echo "$cbp $(echo $cb |cut -f2 -d /)"
 	fi
 fi
-
 if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
 	echo 'Found no efi partition and no freebsd-boot partition.'
 	echo 'Nothing seems updatable.'
