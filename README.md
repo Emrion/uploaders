@@ -10,11 +10,16 @@ Too complex is that thing, they said... So, I wrote this script to demonstrate t
 
 It has two operating modes:  
 
-Usage: loaders-update mode  
+Usage: ./up mode [-m efi_mount_dir] [-s loaders_source_dir]  
 mode can be:  
 * **show-me**: just show the commands to type, change nothing.  
-* **shoot-me**: may update the loader(s), but ask for confirmation before each one.  
-    
+* **shoot-me**: may update the loader(s), but ask for confirmation before each one.
+
+**NEW!**
+* It's now possible now to specify the directory where the efi partitions are mounted with the -m option (default = /mnt).
+* It's also possible to set the directory where the loaders files reside with the -s option (default = /boot).
+
+<br />
     
 What it does handle:
 - Checks all the disks reported by the system (case of mirror disks).
@@ -24,8 +29,8 @@ What it does handle:
 - Recognizes (or try) to identify FreeBSD EFI loaders and would update only them.
 - Doesn't change the name of EFI FreeBSD loaders (case where the admin would have changed the default ones).
 - In case of freebsd-boot partition, checks the coherence between its content and the root file system.
-- Check if each detected loader may be updated or not (case where they are already up to date).
-
+- Checks if each detected loader is already up to date and doesn't try or propose to update in this case.
+  
 What it doesn't handle:
 - Other architecture than amd64.
 - Disks that have other scheme than GPT (concerns mainly MBR scheme).
