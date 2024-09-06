@@ -2,12 +2,17 @@
 
 #### Functions & data ####
 
+# Available modes
 readonly WMN='shoot-me'
 readonly SMN='show-me'
+# Mount point for efi partitions
+EMD="/mnt"
+# Loaders source dir
+SLD="/boot"
 
 Usage()
 {
-	echo "Usage: $0 mode"
+	echo "Usage: $0 mode [-m efi_mount_dir] [-s loaders_source_dir]"
 	echo "mode can be:"
 	echo "  $SMN: just show the commands to type, change nothing."
 	echo "  $WMN: may update the loader(s), but ask for confirmation before each one."
@@ -102,7 +107,7 @@ EfiUpdate()
 
 	# If m is empty, the target partition isn't mounted, we must mount it
 	if [ -z "$m" ]; then
-		m='/mnt'
+		m="$EMD"
 		cmd="mount -t msdosfs /dev/$p $m"
 		echo "$cmd"
 		e="$(TestCmd "$cmd")"
@@ -145,6 +150,24 @@ case "$1" in
 	"$SMN") ;;
 	*) Usage;;
 esac 
+
+shift
+while getopts "m:s:" opt; do
+	case ${opt} in
+		m) EMD="${OPTARG}";;
+		s) SLD="${OPTARG}";;
+		*) Usage;;
+	esac
+done
+
+if ! [ -d "$EMD" ]; then
+	echo "EFI mount point doesn't exist: $EMD"
+	return 1
+fi
+if ! [ -d "$SLD" ]; then
+	echo "Loaders source dir doesn't exist: $SLD"
+	return 1
+fi
 
 if ! ($SM); then
 	echo "$SMN mode: it tells what it would do but changes nothing."
@@ -228,10 +251,10 @@ egs=$(TestCmd "gpart show")
 
 if [ -n "$EFIP" ]; then
 	echo 'One or more efi partition(s) have been found.'
-	CheckSourceFile /boot/loader.efi
+	CheckSourceFile "$SLD/loader.efi"
 	Efimd5="$(md5 -q "$SL")"
 	echo
-	
+
 	for p in $EFIP; do
 		# Try to see if the efi partition is already mounted
 		# (typically in /boot/efi)
@@ -275,13 +298,13 @@ if [ -n "$BIOSD" ]; then
 		rfs="$(mount -p | grep "	/	" | awk '{ print $3 }')"
 		if [ -n "$rfs" ]; then
 			echo "The root file system is $rfs."
-			CheckSourceFile /boot/pmbr
+			CheckSourceFile "$SLD/pmbr"
 			Spmbr="$SL"
 			Pmbrmd5="$(head -c 446 "$Spmbr" | md5 -q)"
 			if [ "$rfs" = "zfs" ]; then
-				CheckSourceFile /boot/gptzfsboot
+				CheckSourceFile "$SLD/gptzfsboot"
 			else	
-				CheckSourceFile /boot/gptboot
+				CheckSourceFile "$SLD//gptboot"
 			fi
 			# SL contains the loader file name suited for the system
 			Gptmd5="$(md5 -q "$SL")"
