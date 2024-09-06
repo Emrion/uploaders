@@ -10,7 +10,7 @@ Too complex is that thing, they said... So, I wrote this script to demonstrate t
 
 It has two operating modes:  
 
-Usage: ./up mode [-m efi_mount_dir] [-s loaders_source_dir]  
+Usage: loaders-update mode [-m efi_mount_dir] [-s loaders_source_dir]  
 mode can be:  
 * **show-me**: just show the commands to type, change nothing.  
 * **shoot-me**: may update the loader(s), but ask for confirmation before each one.
