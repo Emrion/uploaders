@@ -16,7 +16,7 @@ mode can be:
 * **shoot-me**: may update the loader(s), but ask for confirmation before each one.
 
 **NEW!**
-* It's now possible now to specify the directory where the efi partitions are mounted with the -m option (default = /mnt).
+* It's now possible to specify the directory where the efi partitions are mounted with the -m option (default = /mnt).
 * It's also possible to set the directory where the loaders files reside with the -s option (default = /boot).
 
 <br />
