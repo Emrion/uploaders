@@ -1,0 +1,39 @@
+.Dd September 7, 2024
+.Dt Loaders-update 8
+.Os
+.Sh NAME
+.Nm loaders-update
+.Nd This utility helps to update the FreeBSD loaders.
+.Sh SYNOPSIS
+.Nm loaders-update
+.Sy mode
+.Op -m Ar Efi_mount_dir
+.Op -s Ar loaders_source_dir
+.Sh DESCRIPTION
+This command searches for all the FreeBSD loaders, EFI and BIOS ones.
+It checks if they are in sync with the ones inside /boot or inside the argument of the -s option.
+For each one which isn't, it proposes either the commands to type to update it or executes these very commands, depending on the
+.Cm mode.
+.Sh MODE
+.D1 Cm shoot-me
+This mode may update the loader(s), but ask for confirmation before each one.
+You need to be root.
+.Pp
+.D1 Cm show-me
+This mode just shows the commands to type, it changes nothing.
+.Sh OPTIONS
+These options are available:
+.Bl -tag -width ".Cm activate"
+.It Fl m Ar Efi_mount_dir
+If a efi partition isn't already mounted, try to mount it in Efi_mount_dir.
+The default is /mnt.
+.It Fl s Ar loaders_source_dir
+Seek for the source loaders in loaders_source_dir instead of the default /boot.
+.El
+.Sh COMMENTS
+This utility comes to fill a void in the FreeBSD upgrading.
+Many people don't even know about the importance to update the loaders and got bite by different problems along the system upgrades.
+This mainly concerns zfs on root systems, but not only.
+It features to update all the loaders but also tries to stay stable in different environnements and FreeBSD derivatives.
+As such, it can be used in GhostBSD, TrueNas, Hardened BSD and maybe others I didn't test.
+In some words, it costs nothing to run it in show-me mode and see what happens (you can report the result here: https://github.com/Emrion/uploaders or there: https://forums.freebsd.org/threads/utility-that-tries-to-figure-how-to-update-the-freebsd-loaders.94237/
