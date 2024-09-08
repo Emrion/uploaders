@@ -1,40 +1,61 @@
 # uploaders
 
-This sh script is a proof of concept that an automatic update of FreeBSD loaders is possible, but it's also a tool that can help to update these loaders.
+`loaders-update` is a proof of concept, a [sh(1)](https://man.freebsd.org/cgi/man.cgi?query=sh&sektion=1&manpath=freebsd-release) script for attention to: 
 
-Update of the loaders is linked to the evolution of zfs features, but not only.
-Even if no new features are added and the zpool(s) not upgraded, from time to time, some weird problems arise if you don't update.
-Not to speak about the correction of the loaders bugs, which concerns also the systems with ufs on root.
-Some people told me that an automatic update of the loaders isn't possible or, at least, not desirable.
-Too complex is that thing, they said... So, I wrote this script to demonstrate the opposite.
+- the copy of the FreeBSD boot loader on an [EFI system partition](https://en.wikipedia.org/wiki/EFI_system_partition) (ESP)
+- FreeBSD bootcode, where an ESP is either not present or unused.
 
-It has two operating modes:  
+The script can help to update these things.
 
-Usage: loaders-update mode [-m efi_mount_dir] [-s loaders_source_dir]  
-mode can be:  
-* **show-me**: just show the commands to type, change nothing.  
-* **shoot-me**: may update the loader(s), but ask for confirmation before each one.
+Some people feel that automation is not possible, or not desirable.
+Too complex, they say … so, I wrote this script.
 
-**NEW!**
-* It's now possible to specify the directory where the efi partitions are mounted with the -m option (default = /mnt).
-* It's also possible to set the directory where the loaders files reside with the -s option (default = /boot).
+### FreeBSD Project changes to the loader
 
-<br />
-    
-What it does handle:
-- Checks all the disks reported by the system (case of mirror disks).
-- EFI and BIOS loaders.
-- EFI partitions mounted or not mounted.
-- Checks for the presence of EFI loaders in efi/ and lists them all.
-- Recognizes (or try) to identify FreeBSD EFI loaders and would update only them.
-- Doesn't change the name of EFI FreeBSD loaders (case where the admin would have changed the default ones).
-- In case of freebsd-boot partition, checks the coherence between its content and the root file system.
-- Checks if each detected loader is already up to date and doesn't try or propose to update in this case.
+Sometimes, these changes relate to changes to ZFS.
+
+Somtimes not. An outdated loader might be problematic _without_ changes to ZFS; _without_ an upgrade to a ZFS pool; or with _UFS_ on root. 
+
+## Usage and modes
+
+`loaders-update mode [-m efi_mount_dir] [-s loaders_source_dir]`
+
+`mode` can be one of:
+
+* `show-me` – show but do not run commands (change nothing)
+* `shoot-me` – run interactively (with the option of changing nothing).
+
+### New
+
+* option `-m` to specify the mount point of the ESP
+  * default: `/mnt`
+* option `-s `to specify the path to loader-related files
+  * default: `/boot`.
+   
+## Use cases and capabilities
+
+- AMD64 only
+- [GUID Partition Table](https://en.wikipedia.org/wiki/GUID_Partition_Table) (GPT) only
+- BIOS boot
+- [UEFI](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface) boot
+- check all disks
+  - RAID
+  - non-RAID mirroring
+- mount the ESP, if not already mounted by [fstab(5)](https://man.freebsd.org/cgi/man.cgi?query=fstab&sektion=5&manpath=freebsd-release)
+- if loader-related files are present in `efi/`, list the files
+- attempt to identify whether a loader-related file is FreeBSD-specific
+  - if not specific, ignore the file
+- if the FreeBSD loader on an ESP has a nonstandard filename (maybe changed by a system administrator), preserve the name
+- for a freebsd-boot partition, compare its bootcode with bootcode in the OS partition
+- if a detected loader is already up-to-date, neither suggest nor attempt an update.
   
-What it doesn't handle:
-- Other architecture than amd64.
-- Disks that have other scheme than GPT (concerns mainly MBR scheme).
-- Not enough room in the efi partition to copy the loader (can arise with installed version 12 or before and never updated the loader).
-- Not formatted efi partition (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987). However, it tries to identify this case.
-- More than one efi or freebsd-boot partition a disk. It examines only the first efi and freebsd-boot partition.
+### Out of scope
+
+- ESPs that have insufficient space
+  - some installations that originated with FreeBSD 12, or earlier, may have this limitation
+- ESPs with no file system
+  - [FreeBSD bug 258987](https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987)
+  - the script attempts to identify this limitation
+- disks with two or more ESPs, disks with two or more freebsd-boot partitions
+  - if more than one exists on any single disk, the script will work with the first one alone.
 
