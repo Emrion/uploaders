@@ -14,7 +14,7 @@ Too complex, they say … so, I wrote this script.
 
 Sometimes, these changes relate to changes to ZFS.
 
-Somtimes not. An outdated loader might be problematic _without_ changes to ZFS; _without_ an upgrade to a ZFS pool; or with _UFS_ on root. 
+Sometimes not. An outdated loader might be problematic _without_ changes to ZFS; _without_ an upgrade to a ZFS pool; or with _UFS_ on root. 
 
 ## Usage and modes
 
