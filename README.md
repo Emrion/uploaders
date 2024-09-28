@@ -1,20 +1,6 @@
 # uploaders
 
-`loaders-update` is a proof of concept, a [sh(1)](https://man.freebsd.org/cgi/man.cgi?query=sh&sektion=1&manpath=freebsd-release) script for attention to: 
-
-- the copy of the FreeBSD boot loader on an [EFI system partition](https://en.wikipedia.org/wiki/EFI_system_partition) (ESP)
-- FreeBSD bootcode, where an ESP is either not present or unused.
-
-The script can help to update these things.
-
-Some people feel that automation is not possible, or not desirable.
-Too complex, they say … so, I wrote this script.
-
-### FreeBSD Project changes to the loader
-
-Sometimes, these changes relate to changes to ZFS.
-
-Sometimes not. An outdated loader might be problematic _without_ changes to ZFS; _without_ an upgrade to a ZFS pool; or with _UFS_ on root. 
+`loaders-update` is a tool designed to keep the FreeBSD bootcodes and loaders up-to-date.
 
 ## Usage and modes
 
@@ -25,7 +11,7 @@ Sometimes not. An outdated loader might be problematic _without_ changes to ZFS;
 * `show-me` – show but do not run commands (change nothing)
 * `shoot-me` – run interactively (with the option of changing nothing).
 
-### New
+It has the folowing options:
 
 * option `-m` to specify the mount point of the ESP
   * default: `/mnt`
@@ -34,13 +20,11 @@ Sometimes not. An outdated loader might be problematic _without_ changes to ZFS;
    
 ## Use cases and capabilities
 
-- AMD64 only
+- AMD64 only (because I don't have other hardware for testing).
 - [GUID Partition Table](https://en.wikipedia.org/wiki/GUID_Partition_Table) (GPT) only
 - BIOS boot
 - [UEFI](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface) boot
 - check all disks
-  - RAID
-  - non-RAID mirroring
 - mount the ESP, if not already mounted by [fstab(5)](https://man.freebsd.org/cgi/man.cgi?query=fstab&sektion=5&manpath=freebsd-release)
 - if loader-related files are present in `efi/`, list the files
 - attempt to identify whether a loader-related file is FreeBSD-specific
