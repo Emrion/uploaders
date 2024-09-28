@@ -11,7 +11,7 @@
 * `show-me` – show but do not run commands (change nothing)
 * `shoot-me` – run interactively (with the option of changing nothing).
 
-It has the folowing options:
+It has the following options:
 
 * option `-m` to specify the mount point of the ESP
   * default: `/mnt`
