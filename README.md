@@ -9,18 +9,18 @@
 `mode` can be one of:
 
 * `show-me` – show but do not run commands (change nothing)
-* `shoot-me` – run interactively (with the option of changing nothing).
+* `shoot-me` – run interactively (with the option of changing nothing)
 
 It has the following options:
 
 * option `-m` to specify the mount point of the ESP
   * default: `/mnt`
 * option `-s `to specify the path to loader-related files
-  * default: `/boot`.
+  * default: `/boot`
    
 ## Use cases and capabilities
 
-- AMD64 only (because I don't have other hardware for testing).
+- AMD64 only (because I don't have other hardware for testing)
 - [GUID Partition Table](https://en.wikipedia.org/wiki/GUID_Partition_Table) (GPT) only
 - BIOS boot
 - [UEFI](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface) boot
@@ -31,7 +31,7 @@ It has the following options:
   - if not specific, ignore the file
 - if the FreeBSD loader on an ESP has a nonstandard filename (maybe changed by a system administrator), preserve the name
 - for a freebsd-boot partition, compare its bootcode with bootcode in the OS partition
-- if a detected loader is already up-to-date, neither suggest nor attempt an update.
+- if a detected loader is already up-to-date, neither suggest nor attempt an update
   
 ### Out of scope
 
@@ -41,5 +41,5 @@ It has the following options:
   - [FreeBSD bug 258987](https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=258987)
   - the script attempts to identify this limitation
 - disks with two or more ESPs, disks with two or more freebsd-boot partitions
-  - if more than one exists on any single disk, the script will work with the first one alone.
+  - if more than one exists on any single disk, the script will work with the first one alone
 
