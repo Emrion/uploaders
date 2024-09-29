@@ -43,7 +43,7 @@ Usage()
 	echo "mode can be one of:"
 	echo "  $SMN: just show the commands to type, change nothing."
 	echo "  $WMN: may update the loader(s), but ask for confirmation before each one."
-	exit 0
+	exit 1
 }
 
 TestRoot()
