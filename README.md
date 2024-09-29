@@ -30,7 +30,8 @@ It has the following options:
 - attempt to identify whether a loader-related file is FreeBSD-specific
   - if not specific, ignore the file
 - if the FreeBSD loader on an ESP has a nonstandard filename (maybe changed by a system administrator), preserve the name
-- for a freebsd-boot partition, compare its bootcode with bootcode in the OS partition
+- for a freebsd-boot partition, compare its bootcode with the root file system
+  - if not coherent, don't change the content of this freebsd-boot partition 
 - if a detected loader is already up-to-date, neither suggest nor attempt an update
   
 ### Out of scope
