@@ -23,10 +23,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Version 1.0.0
 
 #### Functions & data ####
 
+readonly Version='loaders-update v1.0.1'
 # Available modes
 readonly WMN='shoot-me'
 readonly SMN='show-me'
@@ -37,11 +37,13 @@ SLD="/boot"
 
 Usage()
 {
-	echo "Usage: $0 mode [-m efi_mount_dir] [-s loaders_source_dir]"
-	echo "mode can be:"
+	local exn
+	exn=$(basename "$0")
+	echo "Usage: $exn mode [-m efi_mount_dir] [-s loaders_source_dir]"
+	echo "mode can be one of:"
 	echo "  $SMN: just show the commands to type, change nothing."
 	echo "  $WMN: may update the loader(s), but ask for confirmation before each one."
-	exit 1
+	exit 0
 }
 
 TestRoot()
@@ -114,7 +116,7 @@ CopyEfiLoader()
 	if [ "$(grep -c FreeBSD "$wf")" -gt 0 ]; then			
 		md="$(md5 -q "$wf")"
 		if  [ "$md" = "$Efimd5" ]; then
-			echo "EFI loader $wf is up to date."
+			echo "EFI loader $wf is up-to-date."
 		else
 			PossiblyRun "cp $s $wf" UpEFI mEFI
 		fi
@@ -137,7 +139,7 @@ EfiUpdate()
 		echo "$cmd"
 		e="$(TestCmd "$cmd")"
 		if [ -n "$e" ]; then
-			echo $e
+			echo "$e"
 			echo "Cannot mount $p, so cannot looking for its loader(s)."
 			case "$e" in
 				*Invalid*) echo 'Is this partition formatted?'
@@ -164,7 +166,8 @@ EfiUpdate()
 # To avoid some errors related to grep
 unset GREP_OPTIONS
 
-echo 'This utility helps to update the FreeBSD loaders.'
+echo "$Version"
+
 SM=false
 case "$1" in
 	"$WMN") SM=true
@@ -368,13 +371,13 @@ if [ -n "$BIOSD" ]; then
 				cpmbr="$(head -c 446 /dev/"$d" | md5 -q)"
 				bcode="-b $Spmbr "
 				if [ "$cpmbr" = "$Pmbrmd5" ]; then
-					echo 'The pmbr on this disk is up to date.'
+					echo 'The pmbr on this disk is up-to-date.'
 					unset bcode
 				fi
 				cfbb="$(head -c "$Lgpt" /dev/"${d}"p"$index" | md5 -q)"
 				pcode="-p $SL -i $index "
 				if [ "$cfbb" = "$Gptmd5" ]; then
-					echo "The freebsd-boot partition ${d}p$index is up to date."
+					echo "The freebsd-boot partition ${d}p$index is up-to-date."
 					unset pcode
 				fi
 				if [ -n "$bcode" ] || [ -n "$pcode" ]; then		
@@ -409,22 +412,22 @@ else
 			efibootmgr -E > /dev/null 2>&1
 			if [ $? -gt 0 ]; then
 				# Just print the line reported by efibootmgr
-				echo $cb | cut -f3- -d ' '
+				echo "$cb" | cut -f3- -d ' '
 			else
 				# There, we can identify the boot partition
 				cbp="$(efibootmgr -E)"
 				# Case where the boot partition is a label, convert it to a geom partition
-				if [ -n "$(echo $cbp | grep gpt/)" ]; then
-					lp="$(echo $cbp | cut -f2 -d /)"
+				if [ -n "$(echo "$cbp" | grep gpt/)" ]; then
+					lp="$(echo "$cbp" | cut -f2 -d /)"
 					if [ -n "$lp" ] && [ -z "$egs" ]; then	
 						cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
 					fi
 				fi
-				echo "$cbp $(echo $cb |cut -f2 -d /)"
+				echo "$cbp $(echo "$cb" |cut -f2 -d /)"
 			fi
 		else
 			echo "Cannot use efibootmgr."
-			echo $eb
+			echo "$eb"
 		fi
 	fi
 fi
@@ -440,7 +443,7 @@ else
 			TestRoot
 		else
 			if [ "$Ferr" -eq 0 ]; then
-				echo 'All loaders are up to date.'
+				echo 'All loaders are up-to-date.'
 			fi
 		fi
 	else
