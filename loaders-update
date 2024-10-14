@@ -323,7 +323,7 @@ if [ -n "$BIOSD" ]; then
 		echo "$em"
 	else
 		# Check the root file system
-		rfs="$(mount -p | grep "	/	" | awk '{ print $3 }')"
+		rfs="$(mount -p | grep "\s/\s" | awk '{ print $3 }')"
 		if [ -n "$rfs" ]; then
 			echo "The root file system is $rfs."
 			CheckSourceFile "$SLD/pmbr"
