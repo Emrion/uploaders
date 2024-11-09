@@ -332,7 +332,7 @@ if [ -n "$BIOSD" ]; then
 			if [ "$rfs" = "zfs" ]; then
 				CheckSourceFile "$SLD/gptzfsboot"
 			else	
-				CheckSourceFile "$SLD//gptboot"
+				CheckSourceFile "$SLD/gptboot"
 			fi
 			# SL contains the loader file name suited for the system
 			Gptmd5="$(md5 -q "$SL")"
