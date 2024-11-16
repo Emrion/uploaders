@@ -4,7 +4,7 @@
 
 ## Usage and modes
 
-`loaders-update mode [-m efi_mount_dir] [-s loaders_source_dir]`
+`loaders-update mode [-gr] [-m efi_mount_dir] [-s loaders_source_dir]`
 
 `mode` can be one of:
 
@@ -13,8 +13,10 @@
 
 It has the following options:
 
+* option `-g` force to use 'gpart show' for disk detection.
 * option `-m` to specify the mount point of the ESP
   * default: `/mnt`
+* option `-r` won't check the root file system for BIOS loaders update.
 * option `-s `to specify the path to loader-related files
   * default: `/boot`
    
