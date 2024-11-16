@@ -17,7 +17,7 @@ It has the following options:
 * option `-m` to specify the mount point of the ESP
   * default: `/mnt`
 * option `-r` won't check the root file system for BIOS loaders update.
-* option `-s `to specify the path to loader-related files
+* option `-s` to specify the path to loader-related files
   * default: `/boot`
    
 ## Use cases and capabilities
