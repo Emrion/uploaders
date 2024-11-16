@@ -26,30 +26,38 @@
 
 #### Functions & data ####
 
-readonly Version='loaders-update v1.0.1'
+readonly Version="loaders-update v1.1.0"
 # Available modes
-readonly WMN='shoot-me'
-readonly SMN='show-me'
+readonly WMN="shoot-me"
+readonly SMN="show-me"
 # Mount point for efi partitions
 EMD="/mnt"
 # Loaders source dir
 SLD="/boot"
+# If the root file system must be checked or not (BIOS loader update)
+RFS=true
+# We prefer to use sysctl kern.disk to list the disks
+UKD=true
+
 
 Usage()
 {
 	local exn
 	exn=$(basename "$0")
-	echo "Usage: $exn mode [-m efi_mount_dir] [-s loaders_source_dir]"
+	echo "Usage: $exn mode [-gr] [-m efi_mount_dir] [-s loaders_source_dir]"
 	echo "mode can be one of:"
 	echo "  $SMN: just show the commands to type, change nothing."
 	echo "  $WMN: may update the loader(s), but ask for confirmation before each one."
+	echo "Options:"
+	echo "  -g: force to use 'gpart show' for disk detection."
+	echo "  -r: won't check the root file system for BIOS loaders update."
 	exit 1
 }
 
 TestRoot()
 {
 	if [ "$(id -u)" -ne 0 ]; then 
-		echo 'Consider to run this utility as root.'
+		echo "Consider to run this utility as root."
 	fi
 }
 
@@ -69,10 +77,10 @@ PossiblyRun()
 	if ($SM); then
 		unset rep
 		echo "About to execute: $1"
-		read -p 'Are you sure (y/N)? ' rep
+		read -p "Are you sure (y/N)? " rep
 		case "$rep" in
 			[yY]*) 	;;
-			*) echo 'Nothing has been writted.'
+			*) echo "Nothing has been writted."
 			   eval "$2=\$(($2+1))"
 	   	  	   return;;
 		esac
@@ -113,7 +121,8 @@ CopyEfiLoader()
 		return
 	fi
 	# Checks if the file is a FreeBSD loader
-	if [ "$(grep -c FreeBSD "$wf")" -gt 0 ]; then			
+	if [ "$(grep -c FreeBSD "$wf")" -gt 0 ]; then
+		FBSDL=true			
 		md="$(md5 -q "$wf")"
 		if  [ "$md" = "$Efimd5" ]; then
 			echo "EFI loader $wf is up-to-date."
@@ -142,7 +151,7 @@ EfiUpdate()
 			echo "$e"
 			echo "Cannot mount $p, so cannot looking for its loader(s)."
 			case "$e" in
-				*Invalid*) echo 'Is this partition formatted?'
+				*Invalid*) echo "Is this partition formatted?"
 					   Ferr=$((Ferr+1));;
 				*) Err=$((Err+1));;
 			esac
@@ -150,15 +159,95 @@ EfiUpdate()
 		fi
 		mt=true
 	fi
+
+	FBSDL=false
 	lf="$(find "$m" -type f)"
 	for f in $lf; do
 		CopyEfiLoader "$s" "$f"
 	done
+	if ! ("$FBSDL"); then
+		echo "There is no FreeBSD loader in $p"
+	fi
 	if ($mt); then
 		cmd="umount $m"
 		echo "$cmd"
 		eval "$cmd"
 	fi	
+}
+
+BiosUpdate()
+{
+	# Check the source pmbr
+	CheckSourceFile "$SLD/pmbr"
+	Spmbr="$SL" # Path/name of the source loader
+	Pmbrmd5="$(head -c 446 "$Spmbr" | md5 -q)" # MD5 computation
+	# Check the sources BIOS loaders gptzfsboot & gptboot
+	CheckSourceFile "$SLD/gptzfsboot"
+	Szfs="$SL"
+	Zfsmd5="$(md5 -q "$SL")"
+	Lzfs="$(stat -f "%z" "$SL")" # Size in bytes of the file
+	CheckSourceFile "$SLD/gptboot"
+	Sgpt="$SL"
+	Gptmd5="$(md5 -q "$SL")"
+	Lgpt="$(stat -f "%z" "$SL")"
+	
+	echo
+	i=1
+	for d in $BIOSD; do
+		echo "Examining $d..."
+		
+		# Retrieving the corresponding partition index in BIOSI
+		index=$(eval "echo \$BIOSI | awk '{ print \$$i }'")
+		i=$((i+1))
+
+		# Try to determine whether the partition content is gptboot or gptzfsboot
+		p="/dev/${d}p$index"
+		r1="$(grep -c ZFS "$p")"
+		if [ $? -gt 1 ]; then
+			echo "Error during access to $p. Won't update these loaders."
+			Err=$((Err+1))
+			continue
+		fi
+		r2="$(grep -c zfs "$p")"
+		if [ "$r1" -gt 0 ] && [ "$r2" -gt 0 ]; then
+			# gptzfsboot
+			nfs="zfs"
+			SL="$Szfs"
+			BCmd5="$Zfsmd5"
+			LBC="$Lzfs"
+		else
+			# gtpboot
+			nfs="ufs"
+			SL="$Sgpt"
+			BCmd5="$Gptmd5"
+			LBC="$Lgpt"
+		fi
+		if ($RFS) && ! [ "$rfs" = "$nfs" ]; then
+			echo "There is a mismatch between the root fs and the current loader."
+			echo "Root fs: $rfs / Partition has: $nfs."
+			echo "--> No loader update on $p."
+			Ferr=$((Ferr+1))
+			continue
+		fi
+		cpmbr="$(head -c 446 /dev/"$d" | md5 -q)" # Current pmbr MD5
+		bcode="-b $Spmbr "
+		if [ "$cpmbr" = "$Pmbrmd5" ]; then
+			echo "The pmbr on this disk is up-to-date."
+			unset bcode
+		fi
+		cfbb="$(head -c "$LBC" /dev/"${d}"p"$index" | md5 -q)"
+		pcode="-p $SL -i $index "
+		if ! ("$RFS"); then
+			echo "Loader in ${d}p$index is $(basename "$SL")."
+		fi
+		if [ "$cfbb" = "$BCmd5" ]; then
+			echo "The freebsd-boot partition ${d}p$index is up-to-date."
+			unset pcode
+		fi
+		if [ -n "$bcode" ] || [ -n "$pcode" ]; then		
+			PossiblyRun "gpart bootcode $bcode$pcode$d" UpBIOS mBIOS
+		fi
+	done
 }
 
 #### Main ####
@@ -180,10 +269,12 @@ case "$1" in
 esac 
 
 shift
-while getopts "m:s:" opt; do
+while getopts "m:s:rg" opt; do
 	case ${opt} in
 		m) EMD="${OPTARG}";;
 		s) SLD="${OPTARG}";;
+		r) RFS=false;;
+		g) UKD=false;;
 		*) Usage;;
 	esac
 done
@@ -197,14 +288,6 @@ if ! [ -d "$SLD" ]; then
 	return 1
 fi
 
-if ! ($SM); then
-	echo "$SMN mode: it tells what it would do but changes nothing."
-else
-	echo "$WMN mode selected!"
-fi
-
-echo
-
 a="$(sysctl -n hw.machine)"
 if [ $? -ne 0 ]; then
 	echo "Cannot get the architecture. Exiting."
@@ -212,23 +295,48 @@ if [ $? -ne 0 ]; then
 	return 1
 fi
 if ! [ "$a" = "amd64" ]; then
-	echo 'This utility works only with amd64 architecture. Exiting.'
+	echo "This utility works only with amd64 architecture. Exiting."
 	echo
 	return 1
 fi
 
+# Check some cmd to detect a problem with hardened systems
+em=$(TestCmd "mount -p")
+egs=$(TestCmd "gpart show")
+
 # Get the list of disks
-LD="$(sysctl -n kern.disks)"
-if [ $? -ne 0 ]; then
-	echo "Cannot get the list of disks. Exiting."
-	echo
-	return 1
+if ("$UKD"); then 
+	LD="$(sysctl -n kern.disks)"
+	if [ $? -ne 0 ]; then
+		echo "Cannot get the list of disks."
+		echo "'sysctl kern.disks' doesn't work. Exiting."
+		echo
+		return 1
+	fi
+else
+	if [ -z "$egs" ]; then
+		LD="$(gpart show | grep GPT | cut -wf4)"
+	else
+		echo "Cannot get the list of disks."
+		echo "'gpart show' doesn't work. Exiting."
+		echo "$egs"
+		echo
+		return 1
+	fi
 fi
 if [ -z "$LD" ]; then
-	echo 'No disk has been detected. Exiting.'
+	echo "No disk has been detected. Exiting."
 	echo
 	return 1
 fi
+
+# The welcome words
+if ! ($SM); then
+	echo "$SMN mode: it tells what it would do but changes nothing."
+else
+	echo "$WMN mode selected!"
+fi
+echo
 
 # Search for efi & freebsd-boot partitions
 GPT=false
@@ -251,7 +359,7 @@ for d in $LD; do
 			# Looking for a freebsd-boot type partition
 			pi="$(gpart show "$d" | grep freebsd-boot | awk '{ print $3 }')"
 			if [ -n "$pi" ]; then
-				# BIOSD lists the disks and BIOSI, the corresponding indexes
+				# BIOSD lists the disks and BIOSI the corresponding indexes
 				BIOSD="$BIOSD $d"
 				BIOSI="$BIOSI $pi"
 			fi
@@ -261,152 +369,99 @@ for d in $LD; do
 done
 
 if ! ($GPT); then
-	echo 'This machine seems to have no disk with GPT scheme. Exiting.'
+	echo "This machine seems to have no disk with GPT scheme. Exiting."
 	echo
 	return 1
 fi
 
-Err=0
-Ferr=0
-UpEFI=0
-UpBIOS=0
-mEFI=0
-mBIOS=0
-
-# Check some cmd to detect a problem with hardening system
-em=$(TestCmd "mount -p")
-egs=$(TestCmd "gpart show")
+Err=0      # Errors that may be resolved by running this script as root
+Ferr=0     # Other errors
+UpEFI=0    # Updatable EFI loaders
+UpBIOS=0   # Updatable BIOS loaders
+mEFI=0     # Updated EFI loaders
+mBIOS=0    # Updated BIOS loaders
 
 if [ -n "$EFIP" ]; then
-	echo 'One or more efi partition(s) have been found.'
+	echo "One or more efi partition(s) have been found."
 	CheckSourceFile "$SLD/loader.efi"
 	Efimd5="$(md5 -q "$SL")"
 	echo
 
-	for p in $EFIP; do
-		# Try to see if the efi partition is already mounted
-		# (typically in /boot/efi)
-
-		# Search first by the geom name (e.g. ada0p1)
-		if [ -n "$em" ]; then
-			Err=$((Err+1))
-			echo "$em"
-			break
-		fi
- 		m="$(mount -p | grep "$p" | awk '{ print $2 }')"
-
-		# If not found, try by the label name (e.g. efiboot0)
-		if [ -z "$m" ]; then
-			if [ -n "$egs" ]; then
-				Err=$((Err+1))
-				echo "$egs"
-				continue
-			fi 
- 			lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
-			m="$(mount -p | grep "$lp" | awk '{ print $2 }')"
-		fi
-		if [ -n "$m" ]; then
-			echo "Efi partition $p is already mounted in $m."
-		fi	
-		EfiUpdate "$SL" "$p" "$m"
-		unset m	
-	done
-	echo
-fi
-
-if [ -n "$BIOSD" ]; then
-
-	echo 'One or more freebsd-boot partition(s) have been found.'
-	
 	if [ -n "$em" ]; then
-		Err=$((Err+1))
-		echo "$em"
+			Err=$((Err+1))
+			echo "Cannot work on EFI loaders because 'mount -p' doesn't work."
+			echo "$em"
+
 	else
-		# Check the root file system
-		rfs="$(mount -p | grep "\s/\s" | awk '{ print $3 }')"
-		if [ -n "$rfs" ]; then
-			echo "The root file system is $rfs."
-			CheckSourceFile "$SLD/pmbr"
-			Spmbr="$SL"
-			Pmbrmd5="$(head -c 446 "$Spmbr" | md5 -q)"
-			if [ "$rfs" = "zfs" ]; then
-				CheckSourceFile "$SLD/gptzfsboot"
-			else	
-				CheckSourceFile "$SLD/gptboot"
-			fi
-			# SL contains the loader file name suited for the system
-			Gptmd5="$(md5 -q "$SL")"
-			Lgpt="$(stat -f "%z" "$SL")"
-			echo
+		for p in $EFIP; do
+			echo "Examining $p..."
+			# Try to see if the efi partition is already mounted
+			# (typically in /boot/efi)
+			
+			# Search first by the geom name (e.g. ada0p1)
+ 			m="$(mount -p | grep "$p" | awk '{ print $2 }')"
 
-			i=1
-			for d in $BIOSD; do
-				echo "Examining $d..."
-		
-				# Retrieving the corresponding partition index in BIOSI
-				index=$(eval "echo \$BIOSI | awk '{ print \$$i }'")
-				i=$((i+1))
-
-				# Try to determine whether the partition content is gptboot or gptzfsboot
-				p="/dev/${d}p$index"
-				r1="$(grep -c ZFS "$p")"
-				if [ $? -gt 1 ]; then
-					echo "Error during access to $p. Won't update these loaders."
+			# If not found, try by the label name (e.g. efiboot0)
+			if [ -z "$m" ]; then
+				if [ -n "$egs" ]; then
+					echo "$egs"
 					Err=$((Err+1))
 					continue
-				fi
-				r2="$(grep -c zfs "$p")"
-				if [ "$r1" -gt 0 ] && [ "$r2" -gt 0 ]; then
-					nfs="zfs"
-				else
-					nfs="ufs"
-				fi
-				if ! [ "$rfs" = "$nfs" ]; then
-					echo 'There is a mismatch between the root fs and the current loader.'
-					echo "Root fs: $rfs / Partition has: $nfs."
-					echo "--> No loader update on $p."
-					Ferr=$((Ferr+1))
-					continue
-				fi
-				cpmbr="$(head -c 446 /dev/"$d" | md5 -q)"
-				bcode="-b $Spmbr "
-				if [ "$cpmbr" = "$Pmbrmd5" ]; then
-					echo 'The pmbr on this disk is up-to-date.'
-					unset bcode
-				fi
-				cfbb="$(head -c "$Lgpt" /dev/"${d}"p"$index" | md5 -q)"
-				pcode="-p $SL -i $index "
-				if [ "$cfbb" = "$Gptmd5" ]; then
-					echo "The freebsd-boot partition ${d}p$index is up-to-date."
-					unset pcode
-				fi
-				if [ -n "$bcode" ] || [ -n "$pcode" ]; then		
-					PossiblyRun "gpart bootcode $bcode$pcode$d" UpBIOS mBIOS
-				fi
-			done
-		else
-			echo 'Cannot determine the root file system.'
-			echo "Won't work on the freebsd-boot partition(s)."
-			Err=$((Err+1))
-		fi
+				fi 
+ 				lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
+				m="$(mount -p | grep "$lp" | awk '{ print $2 }')"
+			fi
+			if [ -n "$m" ]; then
+				echo "Efi partition $p is already mounted in $m."
+			fi	
+			EfiUpdate "$SL" "$p" "$m"
+			unset m	
+		done
 	fi
 echo
 fi
 
+if [ -n "$BIOSD" ]; then
 
-echo '-------------------------------'
+	echo "One or more freebsd-boot partition(s) have been found."
+
+	# Check the root file system
+	if ($RFS); then
+		if [ -z "$em" ]; then
+			rfs="$(mount -p | grep "\s/\s" | awk '{ print $3 }')"
+			if [ -n "$rfs" ]; then
+				echo "The root file system is $rfs."
+				BiosUpdate
+			else
+				echo "Cannot determine the root file system."
+				echo "Won't work on the freebsd-boot partition(s)."
+				Err=$((Err+1))
+			fi
+		else
+			echo "The root fs must be checked, but 'mount -p' doesn't work."
+			echo "$em"
+			Err=$((Err+1))
+		fi
+	else
+		echo "The root file system won't be checked."
+		BiosUpdate
+	fi
+echo
+fi
+
+echo "-------------------------------"
 BM=$(sysctl -n machdep.bootmethod)
 if [ $? -ne 0 ]; then
 	echo "Cannot get the boot method."	
 else
 	echo "Your current boot method is $BM."
 
-	# Try to figure out partition & efi file on which the system is currently booting (EFI only)
+	# Try to figure out partition & efi file on which the system is currently booting
 	if [ "$BM" = "UEFI" ] && [ "$(id -u)" -eq 0 ]; then
 		eb="$(TestCmd efibootmgr)"
 		if [ -z "$eb" ]; then
 			cb="$(efibootmgr -v | grep +)"
-			echo -n 'Boot device: '
+			echo -n "Boot device: "
 
 			# It may be impossible for efibootmgr to convert to a unix path
 			efibootmgr -E > /dev/null 2>&1
@@ -432,18 +487,18 @@ else
 	fi
 fi
 if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
-	echo 'Found no efi partition and no freebsd-boot partition.'
-	echo 'Nothing seems updatable.'
+	echo "Found no efi partition and no freebsd-boot partition."
+	echo "Nothing seems updatable."
 else
 	if [ "$mEFI" -eq 0 ] && [ "$mBIOS" -eq 0 ] && [ "$UpEFI" -eq 0 ] && [ "$UpBIOS" -eq 0 ]; then
-		echo 'One or more target partition(s) have been found...'
+		echo "One or more target partition(s) have been found..."
 		if [ "$Err" -gt 0 ]; then
-			echo 'But no loader seems to be updatable.'
+			echo "But no loader seems to be updatable."
 			echo "$Err error(s) occured during the scan."
 			TestRoot
 		else
 			if [ "$Ferr" -eq 0 ]; then
-				echo 'All loaders are up-to-date.'
+				echo "All loaders are up-to-date."
 			fi
 		fi
 	else
@@ -468,6 +523,5 @@ else
 		echo "$Ferr serious error(s) occured. See texts above."
 	fi
 fi
-
-echo '-------------------------------'
+echo "-------------------------------"
 

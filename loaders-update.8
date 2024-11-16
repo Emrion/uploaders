@@ -1,4 +1,4 @@
-.Dd September 7, 2024
+.Dd November 16, 2024
 .Dt Loaders-update 8
 .Os
 .Sh NAME
@@ -7,6 +7,7 @@
 .Sh SYNOPSIS
 .Nm loaders-update
 .Sy mode
+.Op -gr
 .Op -m Ar Efi_mount_dir
 .Op -s Ar loaders_source_dir
 .Sh DESCRIPTION
@@ -24,9 +25,18 @@ This mode just shows the commands to type, it changes nothing.
 .Sh OPTIONS
 These options are available:
 .Bl -tag -width ".Cm activate"
+.It Fl g
+Use 'gpart show' instead of 'sysctl kern.disks' in order to list the available disks.
+In some circumstances, the output of kern.disks doesn't match the geoms that 'gpart' knows.
+So, in case of results like "...no disk with GPT scheme.", you can try this option.
 .It Fl m Ar Efi_mount_dir
 If a efi partition isn't already mounted, try to mount it in Efi_mount_dir.
 The default is /mnt.
+.It Fl r
+Won't check the root file system.
+That means it won't verify the coherence between the current root file system and each BIOS loader.
+It will just check the content of each freebsd-boot partition and verify/update according to that.
+Can be of some use in case you rescue a system with a USB key, for example.
 .It Fl s Ar loaders_source_dir
 Seek for the source loaders in loaders_source_dir instead of the default /boot.
 .El
@@ -36,5 +46,4 @@ Many people don't even know about the importance to update the loaders and got b
 This mainly concerns zfs on root systems, but not only.
 It features to update all the loaders but also tries to stay stable in different environnements and FreeBSD derivatives.
 As such, it can be used in GhostBSD, TrueNas, Hardened BSD and maybe others I didn't test.
-In some words, it costs nothing to run it in show-me mode and see what happens.
-You can report the results here: https://github.com/Emrion/uploaders or there: https://forums.freebsd.org/threads/utility-that-tries-to-figure-how-to-update-the-freebsd-loaders.94237/
+In some words, it costs nothing to run it in show-me mode and see what happens (you can report the result here: https://github.com/Emrion/uploaders or there: https://forums.freebsd.org/threads/utility-that-tries-to-figure-how-to-update-the-freebsd-loaders.94237/
