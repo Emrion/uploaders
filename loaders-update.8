@@ -1,4 +1,4 @@
-.Dd November 16, 2024
+.Dd November 20, 2024
 .Dt Loaders-update 8
 .Os
 .Sh NAME
@@ -30,7 +30,7 @@ Use 'gpart show' instead of 'sysctl kern.disks' in order to list the available d
 In some circumstances, the output of kern.disks doesn't match the geoms that 'gpart' knows.
 So, in case of results like "...no disk with GPT scheme.", you can try this option.
 .It Fl m Ar Efi_mount_dir
-If a efi partition isn't already mounted, try to mount it in Efi_mount_dir.
+If an efi partition isn't already mounted, try to mount it in Efi_mount_dir.
 The default is /mnt.
 .It Fl r
 Won't check the root file system.
@@ -40,10 +40,33 @@ Can be of some use in case you rescue a system with a USB key, for example.
 .It Fl s Ar loaders_source_dir
 Seek for the source loaders in loaders_source_dir instead of the default /boot.
 .El
+.Sh CAPABILITIES
+.It
+ø Check all disks reported by the system.
+.It
+ø Able to work on both BIOS and UEFI loaders.
+.It
+ø Work on mounted or unmounted EFI partitions.
+.It
+ø Recognize FreeBSD EFI loaders and examine only them.
+.It
+ø Check each freebsd-boot partition, compare its bootcode with the root file system.
+If not coherent, don't examine its content (unless -r option is specified).
+.It
+ø If a loader is already up-to-date, neither suggest nor attempt an update.
+.El
+.Sh LIMITATIONS
+.It
+ø Work only on AMD64 architecture.
+.It
+ø Can only examine disks with GUID Partition Table (GPT).
+.It
+ø Check only the first freebsd-boot and efi partition per disk.
+.El
 .Sh COMMENTS
 This utility comes to fill a void in the FreeBSD upgrading.
-Many people don't even know about the importance to update the loaders and got bite by different problems along the system upgrades.
+Many people don't even know about the importance to update the loaders and got bitten by different problems along the system upgrades.
 This mainly concerns zfs on root systems, but not only.
-It features to update all the loaders but also tries to stay stable in different environnements and FreeBSD derivatives.
+It features to update all the loaders but also tries to stay stable in different environments and FreeBSD derivatives.
 As such, it can be used in GhostBSD, TrueNas, Hardened BSD and maybe others I didn't test.
-In some words, it costs nothing to run it in show-me mode and see what happens (you can report the result here: https://github.com/Emrion/uploaders or there: https://forums.freebsd.org/threads/utility-that-tries-to-figure-how-to-update-the-freebsd-loaders.94237/
+In some words, it costs nothing to run it in show-me mode and see what happens. You can report the result here: https://github.com/Emrion/uploaders or there: https://forums.freebsd.org/threads/utility-that-tries-to-figure-how-to-update-the-freebsd-loaders.94237/
