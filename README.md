@@ -13,13 +13,27 @@
 
 It has the following options:
 
+* option `-f` won't check the freebsd-boot partition content for BIOS loaders update.
 * option `-g` force to use 'gpart show' for disk detection.
 * option `-m` to specify the mount point of the ESP
   * default: `/mnt`
 * option `-r` won't check the root file system for BIOS loaders update.
 * option `-s` to specify the path to loader-related files
   * default: `/boot`
-   
+
+## What are we talking about?
+
+The loaders (or bootcodes) are special pieces of software designed to start the OS when you reboot or power on the machine.
+They aim to load some files in the root file system and execute them (which finally lead to run the kernel).
+They change at each FreeBSD upgrade. The new loader files are then put in /boot. However, the currently used loaders are in some special locations:
+
+- For UEFI booting, they are in an efi partition (msdosfs) in the shape of one or several files.
+- For legacy BIOS booting, they are, for one part, in the first sector of a disk (pmbr) and in a freebsd-boot type partition, for the other part (gptboot or gptzfsboot).
+
+The loaders in those special locations aren't updated during a FreeBSD upgrade.This is the goal of loaders-update to do that.
+
+You may also leave the loaders as is, but in case of zfs pool upgrading, the OS won't boot anymore. There are some others problems that may arise if you left your loaders unchanged for too long. This is why a good practice is to systematically update them.
+
 ## Use cases and capabilities
 
 - AMD64 only (because I don't have other hardware for testing)
