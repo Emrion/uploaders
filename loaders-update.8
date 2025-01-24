@@ -1,4 +1,4 @@
-.Dd November 20, 2024
+.Dd January 25, 2025
 .Dt Loaders-update 8
 .Os
 .Sh NAME
@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .Nm loaders-update
 .Sy mode
-.Op -gr
+.Op -fgr
 .Op -m Ar Efi_mount_dir
 .Op -s Ar loaders_source_dir
 .Sh DESCRIPTION
@@ -25,18 +25,24 @@ This mode just shows the commands to type, it changes nothing.
 .Sh OPTIONS
 These options are available:
 .Bl -tag -width ".Cm activate"
+.It Fl f
+Won't check the content of the freebsd-boot partitions.
+That means it won't verify the coherence between the current root file system and each BIOS loader.
+It will update the partitions according to the detected root file system.
+This option cannot be chosen at the same time than -r.
 .It Fl g
 Use 'gpart show' instead of 'sysctl kern.disks' in order to list the available disks.
 In some circumstances, the output of kern.disks doesn't match the geoms that 'gpart' knows.
-So, in case of results like "...no disk with GPT scheme.", you can try this option.
+So, in case of bad or no detection of your disk(s), you can try this option.
 .It Fl m Ar Efi_mount_dir
 If an efi partition isn't already mounted, try to mount it in Efi_mount_dir.
 The default is /mnt.
 .It Fl r
 Won't check the root file system.
-That means it won't verify the coherence between the current root file system and each BIOS loader.
+As -f, it won't verify the coherence between the current root file system and each BIOS loader.
 It will just check the content of each freebsd-boot partition and verify/update according to that.
 Can be of some use in case you rescue a system with a USB key, for example.
+This option cannot be chosen at the same time than -f.
 .It Fl s Ar loaders_source_dir
 Seek for the source loaders in loaders_source_dir instead of the default /boot.
 .El
@@ -51,7 +57,7 @@ Seek for the source loaders in loaders_source_dir instead of the default /boot.
 ø Recognize FreeBSD EFI loaders and examine only them.
 .It
 ø Check each freebsd-boot partition, compare its bootcode with the root file system.
-If not coherent, don't examine its content (unless -r option is specified).
+If not coherent, don't examine its content (unless -r or -f option is specified).
 .It
 ø If a loader is already up-to-date, neither suggest nor attempt an update.
 .El
@@ -62,6 +68,12 @@ If not coherent, don't examine its content (unless -r option is specified).
 ø Can only examine disks with GUID Partition Table (GPT).
 .It
 ø Check only the first freebsd-boot and efi partition per disk.
+.El
+.Sh SEE ALSO
+.Xr uefi 8 ,
+.Xr gpart 8 ,
+.Xr gptboot 8 ,
+.Xr gptzfsboot 8
 .El
 .Sh COMMENTS
 This utility comes to fill a void in the FreeBSD upgrading.
