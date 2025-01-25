@@ -98,7 +98,7 @@ PossiblyRun()
 		case "$rep" in
 			[yY]*) 	;;
 			*) echo "Nothing has been writted."
-			   eval "$2=\$(($VarUpdatable+1))"
+			   eval "$VarUpdatable=\$(($VarUpdatable+1))"
 	   	  	   return;;
 		esac
 		eval "$cmd"
