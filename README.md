@@ -24,7 +24,7 @@ It has the following options:
 ## What are we talking about?
 
 The loaders (or bootcodes) are special pieces of software designed to start the OS when you reboot or power on the machine.
-They aim to load some files in the root file system and execute them (which finally lead to run the kernel).
+They aim to load some files from the root file system and execute them (which finally lead to run the kernel).
 They change at each FreeBSD upgrade. The new loader files are then put in /boot. However, the currently used loaders are in some special locations:
 
 - For UEFI booting, they are in an efi partition (msdosfs) in the shape of one or several files.
