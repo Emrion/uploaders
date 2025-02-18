@@ -476,7 +476,7 @@ if [ -n "$EFIP" ]; then
 			if [ -n "$m" ]; then
 				echo "Efi partition $p is already mounted in $m."
 			fi	
-			EfiUpdate "$SL" "$p" "$m"
+			EfiUpdate "$SLD/$EFILOADER" "$p" "$m"
 		done
 	fi
 echo
