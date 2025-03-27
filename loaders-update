@@ -26,7 +26,7 @@
 
 #### Functions & data ####
 
-readonly Version="loaders-update v1.2.1"
+readonly Version="loaders-update v1.2.2"
 # Available modes
 readonly WMN="shoot-me"
 readonly SMN="show-me"
@@ -472,6 +472,18 @@ if [ -n "$EFIP" ]; then
 				fi 
  				lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
 				m="$(mount -p | grep "$lp" | awk '{ print $2 }')"
+			fi
+			# If not found, look for geom name symlinks
+			if [ -z "$m" ]; then 
+    				lf="$(find "/dev" -type l)"
+    				for f in $lf; do
+        				if [ "$(readlink "$f")" = "$p" ]; then
+						m="$(mount -p | grep "$(basename "$f")" | awk '{ print $2 }')"
+						if [ -n "$m" ]; then
+            						break
+        					fi
+					fi
+    				done
 			fi
 			if [ -n "$m" ]; then
 				echo "Efi partition $p is already mounted in $m."
