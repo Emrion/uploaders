@@ -4,7 +4,7 @@
 
 ## Usage and modes
 
-`loaders-update mode [-gr] [-m efi_mount_dir] [-s loaders_source_dir]`
+`loaders-update mode [-befgqry] [-m efi_mount_dir] [-s loaders_source_dir]`
 
 `mode` can be one of:
 
@@ -12,14 +12,23 @@
 * `shoot-me` – run interactively (with the option of changing nothing)
 
 It has the following options:
-
+* option `-b` Scan only BIOS loaders (exclude EFI loaders).
+* option `-e` Scan only EFI loaders (exclude BIOS loaders).
 * option `-f` won't check the freebsd-boot partition content for BIOS loaders update.
 * option `-g` force to use 'gpart show' for disk detection.
-* option `-m` to specify the mount point of the ESP
+* option `-q  Quiet mode. No output to the console.
+* option `-m` to specify the mount point of the ESP.
   * default: `/mnt`
 * option `-r` won't check the root file system for BIOS loaders update.
-* option `-s` to specify the path to loader-related files
+* option `-s` to specify the path to loader-related files.
   * default: `/boot`
+* option `-y` answer yes for shoot-me mode. Use with caution!
+
+## Return codes
+0: no error.
+1: an error occured.
+2: at least one loader isn't up-to-date.
+3: = 1 + 2.
 
 ## What are we talking about?
 
