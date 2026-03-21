@@ -25,10 +25,10 @@ It has the following options:
 * option `-y` answer yes for shoot-me mode. Use with caution!
 
 ## Return codes
-0: no error.
-1: an error occured.
-2: at least one loader isn't up-to-date.
-3: = 1 + 2.
+0: no error.  
+1: an error occured.  
+2: at least one loader isn't up-to-date.  
+3: = 1 + 2.  
 
 ## What are we talking about?
 
