@@ -12,8 +12,8 @@
 * `shoot-me` – run interactively (with the option of changing nothing)
 
 It has the following options:
-* option `-b` Scan only BIOS loaders (exclude EFI loaders).
-* option `-e` Scan only EFI loaders (exclude BIOS loaders).
+* option `-b` scan only BIOS loaders (exclude EFI loaders).
+* option `-e` scan only EFI loaders (exclude BIOS loaders).
 * option `-f` won't check the freebsd-boot partition content for BIOS loaders update.
 * option `-g` force to use 'gpart show' for disk detection.
 * option `-q` quiet mode. No output to the console.
