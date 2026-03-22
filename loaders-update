@@ -55,7 +55,7 @@ Usage()
 {
 	local exn
 	exn=$(basename "$0")
-	echo "Usage: $exn mode [-fgr] [-m efi_mount_dir] [-s loaders_source_dir]"
+	echo "Usage: $exn mode [-befgqry] [-m efi_mount_dir] [-s loaders_source_dir]"
 	echo "mode can be one of:"
 	echo "  $SMN: just show the commands to type, change nothing."
 	echo "  $WMN: may update the loader(s), but ask for confirmation before each one."
