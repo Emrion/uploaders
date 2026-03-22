@@ -66,7 +66,7 @@ Usage()
 	echo "  -g: force to use 'gpart show' for disk detection."
 	echo "  -q: quiet mode. No output to the console."
 	echo "  -r: won't check the root file system for BIOS loaders update."
-	echo "  -y: answers yes for $WMN mode. Use with caution!"
+	echo "  -y: answer yes for $WMN mode. Use with caution!"
 	echo "Return codes:"	
 	echo "  0: no error."
 	echo "  1: an error occured."
