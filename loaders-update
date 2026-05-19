@@ -525,15 +525,15 @@ if [ -n "$EFIP" ]; then
 					Err=$((Err+1))
 					continue
 				fi 
- 				lp="$(gpart show -pl | grep "$p" | awk '{ print $4 }')"
-				m="$(mount -p | grep "$lp" | awk '{ print $2 }')"
+ 				lp="$(gpart show -pl | grep "$p\s" | awk '{ print $4 }')"
+				m="$(mount -p | grep "$lp\s" | awk '{ print $2 }')"
 			fi
 			# If not found, look for geom name symlinks
 			if [ -z "$m" ]; then 
     				lf="$(find "/dev" -type l)"
     				for f in $lf; do
         				if [ "$(readlink "$f")" = "$p" ]; then
-						m="$(mount -p | grep "$(basename "$f")" | awk '{ print $2 }')"
+						m="$(mount -p | grep "$(basename "$f")\s" | awk '{ print $2 }')"
 						if [ -n "$m" ]; then
             						break
         					fi
