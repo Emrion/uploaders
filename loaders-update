@@ -517,7 +517,7 @@ if [ -n "$EFIP" ]; then
 
 			# Try to see if the efi partition is already mounted
 			# Search first by the geom name (e.g. ada0p1)
- 			m="$(mount -p | grep "$p" | awk '{ print $2 }')"
+ 			m="$(mount -p | grep "$p\s" | awk '{ print $2 }')"
 			# If not found, try by the label name (e.g. efiboot0)
 			if [ -z "$m" ]; then
 				if [ -n "$egs" ]; then
