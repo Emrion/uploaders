@@ -206,7 +206,7 @@ EfiUpdate()
 	fi
 
 	FBSDL=false
-	lf="$(find "$MountedDest" -type f -name *.efi)"
+	lf="$(find "$MountedDest" -type f -iname *.efi)"
 	for f in $lf; do
 		CopyEfiLoader "$SourceFile" "$f"
 	done
