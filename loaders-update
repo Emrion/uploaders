@@ -45,7 +45,7 @@ USE_RFS=true
 USE_FBP=true
 # We prefer to use sysctl kern.disk to list the disks
 USE_KERNDISK=true
-Quiet=false	# No output if true
+Quiet=false		# No output if true
 AutoYes=false	# Automatic Yes in shoot-me mode
 OnlyEFI=false	# Scan only EFI loaders
 OnlyBIOS=false	# Scan only BIOS loaders
@@ -55,6 +55,7 @@ Usage()
 {
 	local exn
 	exn=$(basename "$0")
+	echo "$Version"
 	echo "Usage: $exn mode [-befgqry] [-m efi_mount_dir] [-s loaders_source_dir]"
 	echo "mode can be one of:"
 	echo "  $SMN: just show the commands to type, change nothing."
@@ -242,16 +243,16 @@ SelectBiosLoader()
 
 BiosUpdate()
 {
-	local Spmbr PmbrMD5		# Path/name & md5 of source pmbr
-	# global Szfs ZfsMD5 Lzfs	# Path/name, md5 and size of source gptzfsboot
-	# global Sgpt GptMD5 Lgpt	# Path/name, md5 and size of source gptboot
+	local Spmbr PmbrMD5				# Path/name & md5 of source pmbr
+	# global Szfs ZfsMD5 Lzfs		# Path/name, md5 and size of source gptzfsboot
+	# global Sgpt GptMD5 Lgpt		# Path/name, md5 and size of source gptboot
 	# global BiosLoader BCmd5 LBC	# Path/name, MD5 and size of the selected source loader
-	local d index p			# Disk, index and partition currenlty examined
-	local rBTX rZFS rzfs		# Results / offset of strings search
-	local eof 			# End of file offset in the freebsd-boot partition
-	local pfs			# File system managed by the loader inside the partition
-	# global rfs			# Root file system
-	local CpmbrMD5 CfbbMD5		# MD5 of the current disk pmbr & partition content
+	local d index p					# Disk, index and partition currenlty examined
+	local rBTX rZFS rzfs			# Results / offset of strings search
+	local eof 						# End of file offset in the freebsd-boot partition
+	local pfs						# File system managed by the loader inside the partition
+	# global rfs					# Root file system
+	local CpmbrMD5 CfbbMD5			# MD5 of the current disk pmbr & partition content
 	local bcode pcode i
 
 	# Check the source pmbr 
