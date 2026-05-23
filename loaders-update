@@ -26,7 +26,7 @@
 
 #### Functions & data ####
 
-readonly Version="loaders-update v1.3.2"
+readonly Version="loaders-update v1.4.0"
 # Available modes
 readonly WMN="shoot-me"
 readonly SMN="show-me"
@@ -413,9 +413,13 @@ if [ $? -ne 0 ]; then
 	return 1
 fi
 if ! [ "$a" = "amd64" ]; then
-	Report "This utility works only with amd64 architecture. Exiting."
-	Report
-	return 1
+	if [ "$a" = "arm64" ]; then
+		OnlyEFI=true # No Bios loader for arm64
+	else
+		Report "This utility works only with amd64 or arm64 architectures. Exiting."
+		Report
+		return 1
+	fi
 fi
 
 # Check some cmd to detect a problem with hardened systems
