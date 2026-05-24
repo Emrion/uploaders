@@ -415,6 +415,7 @@ fi
 if ! [ "$a" = "amd64" ]; then
 	if [ "$a" = "arm64" ]; then
 		OnlyEFI=true # No Bios loader for arm64
+		OnlyBIOS=false
 	else
 		Report "This utility works only with amd64 or arm64 architectures. Exiting."
 		Report
