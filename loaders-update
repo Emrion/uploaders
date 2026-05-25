@@ -417,6 +417,7 @@ if ! [ "$arch" = "amd64" ]; then
 		OnlyEFI=true # No Bios loader for arm64
 		OnlyBIOS=false
 		BM="UEFI"
+		USE_KERNDISK=false # gpart is better to see disks for these machines
 	else
 		Report "This utility works only with amd64 or arm64 architectures. Exiting."
 		Report
@@ -601,8 +602,9 @@ if [ -n "$BM" ]; then
 		eb="$(TestCmd efibootmgr)"
 		if [ -z "$eb" ]; then
 			cb="$(efibootmgr -v | grep +)"
-			Report "Boot device: " -n 
-
+			if [ -n "$cb" ]; then
+				Report "Boot device: " -n
+			fi
 			# It may be impossible for efibootmgr to convert to a unix path
 			efibootmgr -E > /dev/null 2>&1
 			if [ $? -gt 0 ]; then
