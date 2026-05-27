@@ -604,23 +604,23 @@ if [ -n "$BM" ]; then
 			cb="$(efibootmgr -v | grep +)"
 			if [ -n "$cb" ]; then
 				Report "Boot device: " -n
-			fi
-			# It may be impossible for efibootmgr to convert to a unix path
-			efibootmgr -E > /dev/null 2>&1
-			if [ $? -gt 0 ]; then
-				# Just print the line reported by efibootmgr
-				Report "$cb" | cut -f3- -d ' '
-			else
-				# There, we can identify the boot partition
-				cbp="$(efibootmgr -E)"
-				# Case where the boot partition is a label, convert it to a geom partition
-				if [ -n "$(echo "$cbp" | grep gpt/)" ]; then
-					lp="$(echo "$cbp" | cut -f2 -d /)"
-					if [ -n "$lp" ] && [ -z "$egs" ]; then	
-						cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+				# It may be impossible for efibootmgr to convert to a unix path
+				efibootmgr -E > /dev/null 2>&1
+				if [ $? -gt 0 ]; then
+					# Just print the line reported by efibootmgr
+					Report "$cb" | cut -f3- -d ' '
+				else
+					# There, we can identify the boot partition
+					cbp="$(efibootmgr -E)"
+					# Case where the boot partition is a label, convert it to a geom partition
+					if [ -n "$(echo "$cbp" | grep gpt/)" ]; then
+						lp="$(echo "$cbp" | cut -f2 -d /)"
+						if [ -n "$lp" ] && [ -z "$egs" ]; then	
+							cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+						fi
 					fi
+					Report "$cbp $(echo "$cb" |cut -f2 -d /)"
 				fi
-				Report "$cbp $(echo "$cb" |cut -f2 -d /)"
 			fi
 		else
 			Report "Cannot use efibootmgr."
