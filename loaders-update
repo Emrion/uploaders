@@ -26,7 +26,7 @@
 
 #### Functions & data ####
 
-readonly Version="loaders-update v1.3.2"
+readonly Version="loaders-update v1.4.0"
 # Available modes
 readonly WMN="shoot-me"
 readonly SMN="show-me"
@@ -406,16 +406,23 @@ if ! [ -d "$SLD" ]; then
 	return 1
 fi
 
-a="$(sysctl -n hw.machine)"
+arch="$(sysctl -n hw.machine)"
 if [ $? -ne 0 ]; then
 	Report "Cannot get the architecture. Exiting."
 	Report
 	return 1
 fi
-if ! [ "$a" = "amd64" ]; then
-	Report "This utility works only with amd64 architecture. Exiting."
-	Report
-	return 1
+if ! [ "$arch" = "amd64" ]; then
+	if [ "$arch" = "arm64" ]; then
+		OnlyEFI=true # No Bios loader for arm64
+		OnlyBIOS=false
+		BM="UEFI"
+		USE_KERNDISK=false # gpart is better to see disks for these machines
+	else
+		Report "This utility works only with amd64 or arm64 architectures. Exiting."
+		Report
+		return 1
+	fi
 fi
 
 # Check some cmd to detect a problem with hardened systems
@@ -581,10 +588,13 @@ fi
 
 RetCode=0
 Report "-------------------------------"
-BM=$(sysctl -n machdep.bootmethod)
-if [ $? -ne 0 ]; then
-	Report "Cannot get the boot method."	
-else
+if [ -z "$BM" ]; then
+	BM=$(sysctl -n machdep.bootmethod)
+	if [ $? -ne 0 ]; then
+		Report "Cannot get the boot method."	
+	fi
+fi
+if [ -n "$BM" ]; then
 	Report "Your current boot method is $BM."
 
 	# Try to figure out partition & efi file on which the system is currently booting
@@ -592,24 +602,25 @@ else
 		eb="$(TestCmd efibootmgr)"
 		if [ -z "$eb" ]; then
 			cb="$(efibootmgr -v | grep +)"
-			Report "Boot device: " -n 
-
-			# It may be impossible for efibootmgr to convert to a unix path
-			efibootmgr -E > /dev/null 2>&1
-			if [ $? -gt 0 ]; then
-				# Just print the line reported by efibootmgr
-				Report "$cb" | cut -f3- -d ' '
-			else
-				# There, we can identify the boot partition
-				cbp="$(efibootmgr -E)"
-				# Case where the boot partition is a label, convert it to a geom partition
-				if [ -n "$(echo "$cbp" | grep gpt/)" ]; then
-					lp="$(echo "$cbp" | cut -f2 -d /)"
-					if [ -n "$lp" ] && [ -z "$egs" ]; then	
-						cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+			if [ -n "$cb" ]; then
+				Report "Boot device: " -n
+				# It may be impossible for efibootmgr to convert to a unix path
+				efibootmgr -E > /dev/null 2>&1
+				if [ $? -gt 0 ]; then
+					# Just print the line reported by efibootmgr
+					Report "$cb" | cut -f3- -d ' '
+				else
+					# There, we can identify the boot partition
+					cbp="$(efibootmgr -E)"
+					# Case where the boot partition is a label, convert it to a geom partition
+					if [ -n "$(echo "$cbp" | grep gpt/)" ]; then
+						lp="$(echo "$cbp" | cut -f2 -d /)"
+						if [ -n "$lp" ] && [ -z "$egs" ]; then	
+							cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+						fi
 					fi
+					Report "$cbp $(echo "$cb" |cut -f2 -d /)"
 				fi
-				Report "$cbp $(echo "$cb" |cut -f2 -d /)"
 			fi
 		else
 			Report "Cannot use efibootmgr."
@@ -618,7 +629,7 @@ else
 	fi
 fi
 if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
-	Report "Found no efi partition and no freebsd-boot partition."
+	Report "Found no partition containing a loader."
 	Report "Nothing seems updatable."
 else
 	if [ "$mEFI" -eq 0 ] && [ "$mBIOS" -eq 0 ] && [ "$UpEFI" -eq 0 ] && [ "$UpBIOS" -eq 0 ]; then

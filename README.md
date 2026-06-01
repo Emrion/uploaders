@@ -45,7 +45,7 @@ You may also leave the loaders as is, but in case of zfs pool upgrading, the OS 
 
 ## Use cases and capabilities
 
-- AMD64 only
+- Architectures AMD64 and ARM64 only
 - [GUID Partition Table](https://en.wikipedia.org/wiki/GUID_Partition_Table) (GPT) only
 - BIOS boot
 - [UEFI](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface) boot
