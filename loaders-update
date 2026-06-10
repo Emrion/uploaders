@@ -412,18 +412,21 @@ if [ $? -ne 0 ]; then
 	Report
 	return 1
 fi
-if ! [ "$arch" = "amd64" ]; then
-	if [ "$arch" = "arm64" ]; then
-		OnlyEFI=true # No Bios loader for arm64
-		OnlyBIOS=false
-		BM="UEFI"
-		USE_KERNDISK=false # gpart is better to see disks for these machines
-	else
-		Report "This utility works only with amd64 or arm64 architectures. Exiting."
-		Report
-		return 1
-	fi
-fi
+case "$arch" in
+	arm64)
+			OnlyEFI=true # No Bios loader for arm64
+			OnlyBIOS=false
+			BM="UEFI"
+			USE_KERNDISK=false # gpart is better to see disks for these machines
+			;;
+	amd64)
+			;; # Nothing to do
+	*)
+			Report "This utility works only with amd64 or arm64 architectures. Exiting."
+			Report
+			return 1
+			;;
+esac
 
 # Check some cmd to detect a problem with hardened systems
 em=$(TestCmd "mount -p")
