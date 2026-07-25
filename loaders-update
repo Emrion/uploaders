@@ -26,7 +26,7 @@
 
 #### Functions & data ####
 
-readonly Version="loaders-update v1.4.0"
+readonly Version="loaders-update v1.4.1"
 # Available modes
 readonly WMN="shoot-me"
 readonly SMN="show-me"
@@ -35,6 +35,7 @@ readonly EFILOADER="loader.efi"
 readonly PMBR="pmbr"
 readonly GPTBOOT="gptboot"
 readonly GPTZFSBOOT="gptzfsboot"
+readonly EVLP="LoaderPath" # Name of the efi var for booted file
 # Mount point for efi partitions
 EMD="/mnt"
 # Loaders source dir
@@ -622,9 +623,22 @@ if [ -n "$BM" ]; then
 							cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
 						fi
 					fi
-					Report "$cbp $(echo "$cb" |cut -f2 -d /)"
+					Report "$cbp"
 				fi
 			fi
+			# Get the loader path
+			lpf="$(TestCmd efivar)"
+			if [ -z "$lpf" ]; then
+				lpf="$(efivar -l | grep "$EVLP")"
+				if [ -n "$lpf" ]; then
+					lpf="$(efivar "$lpf" -N --utf8)"
+					if [ -n "$lpf" ]; then
+						lpf="$(echo "$lpf"|sed -e 's#\\#/#g')"
+						Report "Loader path: $lpf"
+					fi
+				fi
+			fi
+			
 		else
 			Report "Cannot use efibootmgr."
 			Report "-> $eb"
