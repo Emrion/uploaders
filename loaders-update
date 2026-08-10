@@ -26,20 +26,26 @@
 
 #### Functions & data ####
 
-readonly Version="loaders-update v1.4.1"
+readonly Version="loaders-update v1.5.0"
 # Available modes
 readonly WMN="shoot-me"
 readonly SMN="show-me"
+readonly IMN="make-efi-failsafe"
 # Loaders file names
 readonly EFILOADER="loader.efi"
+readonly FILEPREFIX="LU-"
+readonly SAVEDEFILOADER="${FILEPREFIX}old-loader.efi"
+readonly FAILSAFELABEL="${FILEPREFIX}FailSafe"
 readonly PMBR="pmbr"
 readonly GPTBOOT="gptboot"
 readonly GPTZFSBOOT="gptzfsboot"
 readonly EVLP="LoaderPath" # Name of the efi var for booted file
-# Mount point for efi partitions
-EMD="/mnt"
-# Loaders source dir
-SLD="/boot"
+readonly EBO="BootOrder"
+readonly TMPFILE="/tmp/${FILEPREFIX}data"
+
+EMD="/mnt" # Mount point for efi partitions
+SLD="/boot" # Loaders source dir
+SBD="/root" # Place where the BIOS loaders are saved
 # If the root file system must be checked or not (BIOS loaders update)
 USE_RFS=true
 # If the content of the freebsd-boot partition(s) must be checked or not
@@ -50,6 +56,7 @@ Quiet=false		# No output if true
 AutoYes=false	# Automatic Yes in shoot-me mode
 OnlyEFI=false	# Scan only EFI loaders
 OnlyBIOS=false	# Scan only BIOS loaders
+BIOSbackup=true # The BIOS loaders will be saved before change
 
 
 Usage()
@@ -57,15 +64,18 @@ Usage()
 	local exn
 	exn=$(basename "$0")
 	echo "$Version"
-	echo "Usage: $exn mode [-befgqry] [-m efi_mount_dir] [-s loaders_source_dir]"
+	echo "Usage: $exn mode [-befgnoqry] [-m efi_mount_dir] [-s loaders_source_dir]"
 	echo "mode can be one of:"
 	echo "  $SMN: just show the commands to type, change nothing."
 	echo "  $WMN: may update the loader(s), but ask for confirmation before each one."
+	echo "  $IMN: set the EFI fail safe feature."
 	echo "Options:"
 	echo "  -b: scan only BIOS loaders (excludes EFI loaders)."
 	echo "  -e: scan only EFI loaders (excludes BIOS loaders)."
 	echo "  -f: won't check the freebsd-boot content for BIOS loaders update."
 	echo "  -g: force to use 'gpart show' for disk detection."
+	echo "  -n: don't backup the BIOS loaders."
+	echo "  -o: specify the directory where to save the BIOS loaders. Default=$SBD"
 	echo "  -q: quiet mode. No output to the console."
 	echo "  -r: won't check the root file system for BIOS loaders update."
 	echo "  -y: answer yes for $WMN mode. Use with caution!"
@@ -92,6 +102,16 @@ TestRoot()
 	fi
 }
 
+Ask()
+{
+	local rep
+	read -p "$1 " rep
+	case "$rep" in
+		[yY]*) 	return 0;;
+		*) return 1;;
+	esac
+}
+
 # TestCmd cmd
 # Warning: the command is executed, not only tested
 TestCmd()
@@ -114,18 +134,16 @@ PossiblyRun()
 	VarUpdatable="$2"
 	VarUpdated="$3"
 
-	if ($SM); then	# SM is true if Shoot-me Mode is selected
+	if ($SM); then	# SM is true if shoot-me Mode is selected
 		unset rep
 		if ! ($AutoYes); then
 			echo "About to execute: $cmd"
-			read -p "Are you sure (y/N)? " rep
-			case "$rep" in
-				[yY]*) 	;;
-				*) echo "Nothing has been writted."
+			if ! Ask "Are you sure (y/N)?"; then
+				echo "Nothing has been writted."
 			   	eval "$VarUpdatable=\$(($VarUpdatable+1))"
-	   	  	   	return;;
-			esac
-		fi
+	   	  	   	return
+			fi
+		fi 
 		if ($Quiet); then
 			eval "$cmd" > /dev/null
 		else
@@ -171,6 +189,10 @@ CopyEfiLoader()
 		if  [ "$TFmd5" = "$Efimd5" ]; then
 			Report "EFI loader $TargetFile is up-to-date."
 		else
+			# Save this loader in case we need it for SAVEDEFILOADER
+			if ($SM); then
+				cp "$TargetFile" "$TMPFILE"
+			fi
 			PossiblyRun "cp $SourceFile $TargetFile" UpEFI mEFI
 		fi
 	fi
@@ -180,7 +202,7 @@ CopyEfiLoader()
 EfiUpdate()
 {
 	local SourceFile TargetPartition MountedDest
-	local mt cmd e lf f
+	local mt cmd e lf f ptol
 	# global FBSDL: is a loader found in TargetPartition?
 
 	SourceFile="$1"
@@ -208,13 +230,33 @@ EfiUpdate()
 	fi
 
 	FBSDL=false
-	lf="$(find "$MountedDest" -type f -iname *.efi)"
+	Imefi=$mEFI
+	lf="$(find "$MountedDest" -type f -iname "*.efi")"
 	for f in $lf; do
-		CopyEfiLoader "$SourceFile" "$f"
+		# Test all .efi files except the saved efiloader.
+		if [ -z "$(echo "$f" | grep "/$SAVEDEFILOADER")" ]; then
+			CopyEfiLoader "$SourceFile" "$f"
+		else
+			ptol="$f"
+		fi
 	done
 	if ! ("$FBSDL"); then
 		Report "There is no FreeBSD loader in $TargetPartition"
 	fi
+	if [ -n "$ptol" ]; then
+		# If an efi loader has been updated and the SAVEDEFILOADER is present
+		# Copy the previous saved loader to old loader.
+		if [ $mEFI -gt $Imefi ]; then
+			Report "Saving old EFI loader in $ptol."
+			cp "$TMPFILE" "$ptol"
+		else
+			Report "The EFI fail safe feature seems to be enabled."
+		fi
+	else
+		Report "The EFI fail safe feature isn't enabled."
+	fi
+	unset ptol
+	rm -f "$TMPFILE"
 	if ($mt); then
 		cmd="umount $MountedDest"
 		Report "$cmd"
@@ -349,10 +391,114 @@ BiosUpdate()
 			Report "The freebsd-boot partition ${d}p$index is up-to-date."
 			unset pcode
 		fi
-		if [ -n "$bcode" ] || [ -n "$pcode" ]; then		
+		if [ -n "$bcode" ] || [ -n "$pcode" ]; then
+			Imbios=$mBIOS
+			if ($SM) && ($BIOSbackup); then
+				dd if="/dev/$d" bs=512 count=1 status=none > "$TMPFILE"
+				dd if="/dev/${d}p$index" status=none > "${TMPFILE}1"
+			fi		
 			PossiblyRun "gpart bootcode $bcode$pcode$d" UpBIOS mBIOS
+			if  ($BIOSbackup) && [ $mBIOS -gt $Imbios ]; then
+				if [ -n "$bcode" ]; then
+					cp "$TMPFILE" "$SBD/$PMBR.$d"
+					Report "Previous $PMBR saved in $SBD/$PMBR.$d"
+				fi
+				if [ -n "$pcode" ]; then
+					bln="$(basename "$BiosLoader")"
+					cp "${TMPFILE}1" "$SBD/$bln.${d}p$index"
+					Report "Previous $bln saved in $SBD/$bln.${d}p$index"
+				fi
+			fi
+			rm -f "$TMPFILE" "${TMPFILE}1"	
 		fi
 	done
+}
+
+GetBootMethod()
+{
+	if [ -z "$BM" ]; then
+		BM=$(sysctl -n machdep.bootmethod)
+		if [ $? -ne 0 ]; then
+			Report "Cannot get the boot method."	
+		fi
+	fi
+}
+
+GetEfiBootDevice()
+{
+	local cb=""
+	local lp
+	if [ -z "$eebm" ]; then
+		cb="$(efibootmgr -v | grep +)"
+		if [ -n "$cb" ]; then
+			# It may be impossible for efibootmgr to convert to a unix path
+			efibootmgr -E > /dev/null 2>&1
+			if [ $? -gt 0 ]; then
+				# Just print the line reported by efibootmgr
+				cb="$(echo "$cb@" | cut -f3- -d ' ')"
+			else
+				# There, we can identify the boot partition
+				cb="$(efibootmgr -E)"
+				# Case where the boot partition is a label, convert it to a geom partition
+				if [ -n "$(echo "$cb" | grep gpt/)" ]; then
+					lp="$(echo "$cb" | cut -f2 -d /)"
+					if [ -n "$lp" ] && [ -z "$egs" ]; then	
+						cb="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
+						
+					fi
+				fi
+				cb="$(echo "$cb"|sed -e 's#\\#/#g')"     # Change \ for /
+				cb="$(echo "$cb" | sed -e 's#/dev/##1')" # Remove "/dev/"
+			fi
+		fi
+	fi
+	echo "$cb"
+}
+
+GetEfiLoaderPath()
+{
+	local lpf="$(TestCmd efivar)"
+	if [ -z "$lpf" ]; then
+		lpf="$(efivar -l | grep "$EVLP")" # Get the real var name with uuid
+		if [ -n "$lpf" ]; then
+			lpf="$(efivar "$lpf" -N --utf8)"
+			lpf="$(echo "$lpf"|sed -e 's#\\#/#g')"
+		fi
+	else
+		unset lpf	
+	fi
+	echo "$lpf"	
+}
+
+GetEfiMount() # Check if partition $1 is already mounted
+{
+	local p="$1"
+	local m=""
+	# Try to see if the efi partition is already mounted
+	# Search first by the geom name (e.g. ada0p1)
+ 	m="$(mount -p | grep "$p\s" | awk '{ print $2 }')"
+	# If not found, try by the label name (e.g. efiboot0)
+	if [ -z "$m" ]; then
+		if [ -n "$egs" ]; then
+			Report "$egs"
+			Err=$((Err+1))
+	fi 
+ 	lp="$(gpart show -pl | grep "$p\s" | awk '{ print $4 }')"
+	m="$(mount -p | grep "$lp\s" | awk '{ print $2 }')"
+	fi
+	# If not found, look for geom name symlinks
+	if [ -z "$m" ]; then 
+    		lf="$(find "/dev" -type l)"
+    		for f in $lf; do
+        		if [ "$(readlink "$f")" = "$p" ]; then
+				m="$(mount -p | grep "$(basename "$f")\s" | awk '{ print $2 }')"
+				if [ -n "$m" ]; then
+            				break
+        			fi
+			fi
+    		done
+	fi
+	echo "$m"
 }
 
 #### Main ####
@@ -360,17 +506,23 @@ BiosUpdate()
 # To avoid some errors related to grep
 unset GREP_OPTIONS
 
-case "$1" in
+Mode="$1"
+IM=false
+SM=false
+case "$Mode" in
 	"$WMN") SM=true;;
 	"$SMN") SM=false;;
+	"$IMN") IM=true;;
 	*) Usage;;
 esac 
 
 shift
-while getopts "m:s:rgfebqy" opt; do
+while getopts "m:s:o:rgfebnqy" opt; do
 	case ${opt} in
 		m) EMD="${OPTARG}";;
 		s) SLD="${OPTARG}";;
+		o) SBD="${OPTARG}";;
+		n) BIOSbackup=false;;
 		r) USE_RFS=false;;
 		g) USE_KERNDISK=false;;
 		f) USE_FBP=false;;
@@ -384,8 +536,13 @@ done
 
 Report "$Version"
 
-if [ "$(id -u)" -ne 0 ] && ($SM); then 
-	Report "You need to be root to operate in $WMN mode."
+if ($IM); then
+	OnlyEFI=true;
+	OnlyBIOS=false;
+fi
+
+if [ "$(id -u)" -ne 0 ] && (($SM) || ($IM)); then 
+	Report "You need to be root to operate in $Mode mode."
 	return 1
 fi
 
@@ -402,8 +559,13 @@ if ! [ -d "$EMD" ] && ! ($OnlyBIOS); then
 	Report "EFI mount point doesn't exist: $EMD"
 	return 1
 fi
-if ! [ -d "$SLD" ]; then
+if ! ($IM) && ! [ -d "$SLD" ]; then
 	Report "Loaders source dir doesn't exist: $SLD"
+	return 1
+fi
+
+if ($SM) && ! ($OnlyEFI) && ! [ -d "$SBD" ]; then
+	Report "BIOS backup dir doesn't exist: $SBD"
 	return 1
 fi
 
@@ -432,6 +594,9 @@ esac
 # Check some cmd to detect a problem with hardened systems
 em=$(TestCmd "mount -p")
 egs=$(TestCmd "gpart show")
+if [ "$(id -u)" -eq 0 ]; then
+	eebm="$(TestCmd efibootmgr)"
+fi
 
 # Get the list of disks
 if ($USE_KERNDISK); then 
@@ -460,7 +625,7 @@ if [ -z "$LD" ]; then
 fi
 
 if ! ($SM) && ($AutoYes); then
-	Report "Option -y has no sense in $SMN mode."
+	Report "Option -y has no sense in $Mode mode."
 fi
 Report
 
@@ -500,6 +665,125 @@ if ! ($GPT); then
 	return 1
 fi
 
+#---------------------------------------------------------
+# Try here to activate the EFI fail safe feature, if asked.
+#---------------------------------------------------------
+if ($IM); then 
+	GetBootMethod
+	if ! [ "$BM" = "UEFI" ]; then
+		Report "$Mode works only with UEFI boot method."
+		return 1
+	fi
+	if [ -z "$EFIP" ]; then
+		Report "No EFI partition have been found. Cannot go further."
+		return 1
+	fi
+	if [ -z "$eebm" ]; then
+		if [ -n "$(efibootmgr -v|grep $FAILSAFELABEL)" ]; then
+			Report "EFI fail safe feature is already enabled."
+			return 1
+		fi
+	else
+		Report "efibootmgr doesn't work:"
+		Report "-> $eebm"
+		return 1
+	fi	
+	ebd="$(GetEfiBootDevice)"
+	if [ -z "$ebd" ]; then
+		Report "Cannot get the EFI boot device."
+		return 1
+	fi
+	if [ -n "$(echo "$ebd"|grep @)" ]; then
+		cnfbd=true
+	else
+		cnfbd=false
+	fi
+
+	echo "About to implant loaders-update EFI fail safe feature in your machine."
+	echo "Warning: if you have a bogus EFI firmware, this may fail without notice."
+	if  ! Ask "Are you ok with that (y/n)?"; then
+		return 1
+	fi	
+	if ($cnfbd); then # Here, efibootmgr didn't success to convert to a UNIX path
+		# Look into found efi partitions, if there is only one, it's this one.
+		if [ "$(echo "$EFIP"| wc -w)" -eq 1 ]; then
+			ebd="$(echo "$EFIP"| sed -e 's# ##1')"
+		else # Several possibilities, ask to the admin
+			echo "Choose the partition where to install:"
+			echo "$EFIP"
+			while true; do
+				read -p "Which one? " rep
+				if [ -n "$rep" ]; then
+					case $EFIP in
+						*" $rep"*) break;;
+					esac
+				fi
+				echo "Please choose a detected partition..."
+			done
+			ebd="$rep"
+		fi
+	fi
+	# Try to see if the partition is already mounted or not
+	mnt=false
+	m="$(GetEfiMount "$ebd")"
+	if [ -z "$m" ]; then
+		if ! mount -t msdosfs "/dev/$ebd" "$EMD"; then
+			Report "Cannot mount the booting partition: $ebd."
+			return 1
+		else
+			m="$EMD"
+			mnt=true
+		fi
+	fi
+	elp="$(GetEfiLoaderPath)"
+	if [ -z "$elp" ]; then
+		Report "Cannot get the actual EFI loader path."
+		if ($mnt); then
+			umount "$m"
+		fi
+		return 1
+	fi
+	fcp="$(dirname "$(readlink -f "$m/$elp")")"
+	if  ! cp "$m/$elp" "$fcp/$SAVEDEFILOADER"; then
+		Report "Cannot copy loader to $SAVEDEFILOADER."
+		if ($mnt); then
+			umount "$m"
+		fi
+		return 1
+	fi
+	if ! efibootmgr -ca -l "$fcp/$SAVEDEFILOADER" -L "$FAILSAFELABEL" > /dev/null; then
+		Report "Cannot create the efi var."
+		Report "Nevertheless, the loader will be saved in $SAVEDEFILOADER."
+		if ($mnt); then
+			umount "$m"
+		fi
+		return 1
+	fi
+	if ($mnt); then
+		umount "$m"
+	fi
+	bo="$(efivar -l | grep "$EBO")" # Get the real var name with uuid
+	if [ -z "$bo" ]; then
+		Report "Cannot get the BootOrder EFI var."
+		Report "Please correct the boot order with efibootmgr -o ..."
+		return 1
+	fi
+	efivar "$bo" -Nb > "$TMPFILE"
+	dd if="$TMPFILE" bs=1 skip=2 status=none of="${TMPFILE}1"
+	dd if="$TMPFILE" bs=1 count=2 status=none >> "${TMPFILE}1"
+	cat "${TMPFILE}1" | efivar "$bo" -w
+	r=$?
+	rm "$TMPFILE" "${TMPFILE}1"
+	if [ $r -ne 0 ]; then
+		Report "Cannot set the BootOrder EFI var."
+		Report "Please correct the boot order with efibootmgr -o ..."
+		return 1
+	fi
+	Report "loaders-update EFI fail safe feature implanted."
+	Report "Check with efibootmgr -v before and after reboot that all is ok."
+	return 0 
+fi	
+
 Err=0      # Errors that may be resolved by running this script as root
 Ferr=0     # Other errors
 UpEFI=0    # Updatable EFI loaders
@@ -526,32 +810,7 @@ if [ -n "$EFIP" ]; then
 	else
 		for p in $EFIP; do
 			Report "Examining $p..."
-
-			# Try to see if the efi partition is already mounted
-			# Search first by the geom name (e.g. ada0p1)
- 			m="$(mount -p | grep "$p\s" | awk '{ print $2 }')"
-			# If not found, try by the label name (e.g. efiboot0)
-			if [ -z "$m" ]; then
-				if [ -n "$egs" ]; then
-					Report "$egs"
-					Err=$((Err+1))
-					continue
-				fi 
- 				lp="$(gpart show -pl | grep "$p\s" | awk '{ print $4 }')"
-				m="$(mount -p | grep "$lp\s" | awk '{ print $2 }')"
-			fi
-			# If not found, look for geom name symlinks
-			if [ -z "$m" ]; then 
-    				lf="$(find "/dev" -type l)"
-    				for f in $lf; do
-        				if [ "$(readlink "$f")" = "$p" ]; then
-						m="$(mount -p | grep "$(basename "$f")\s" | awk '{ print $2 }')"
-						if [ -n "$m" ]; then
-            						break
-        					fi
-					fi
-    				done
-			fi
+			m="$(GetEfiMount "$p")"
 			if [ -n "$m" ]; then
 				Report "Efi partition $p is already mounted in $m."
 			fi	
@@ -592,59 +851,28 @@ fi
 
 RetCode=0
 Report "-------------------------------"
-if [ -z "$BM" ]; then
-	BM=$(sysctl -n machdep.bootmethod)
-	if [ $? -ne 0 ]; then
-		Report "Cannot get the boot method."	
-	fi
-fi
+
+GetBootMethod
 if [ -n "$BM" ]; then
 	Report "Your current boot method is $BM."
-
+	
 	# Try to figure out partition & efi file on which the system is currently booting
 	if [ "$BM" = "UEFI" ] && [ "$(id -u)" -eq 0 ]; then
-		eb="$(TestCmd efibootmgr)"
-		if [ -z "$eb" ]; then
-			cb="$(efibootmgr -v | grep +)"
-			if [ -n "$cb" ]; then
-				Report "Boot device: " -n
-				# It may be impossible for efibootmgr to convert to a unix path
-				efibootmgr -E > /dev/null 2>&1
-				if [ $? -gt 0 ]; then
-					# Just print the line reported by efibootmgr
-					Report "$cb" | cut -f3- -d ' '
-				else
-					# There, we can identify the boot partition
-					cbp="$(efibootmgr -E)"
-					# Case where the boot partition is a label, convert it to a geom partition
-					if [ -n "$(echo "$cbp" | grep gpt/)" ]; then
-						lp="$(echo "$cbp" | cut -f2 -d /)"
-						if [ -n "$lp" ] && [ -z "$egs" ]; then	
-							cbp="$(gpart show -lp | grep "$lp" | awk '{ print $3 }')" 
-						fi
-					fi
-					Report "$cbp"
-				fi
-			fi
-			# Get the loader path
-			lpf="$(TestCmd efivar)"
-			if [ -z "$lpf" ]; then
-				lpf="$(efivar -l | grep "$EVLP")"
-				if [ -n "$lpf" ]; then
-					lpf="$(efivar "$lpf" -N --utf8)"
-					if [ -n "$lpf" ]; then
-						lpf="$(echo "$lpf"|sed -e 's#\\#/#g')"
-						Report "Loader path: $lpf"
-					fi
-				fi
-			fi
-			
-		else
-			Report "Cannot use efibootmgr."
-			Report "-> $eb"
+		ebd="$(GetEfiBootDevice)"
+		ebd="$(echo "$ebd"|sed -e 's#@##1')"
+		if [ -n "$ebd" ]; then
+			Report "Boot device: $ebd"
+		fi
+		# Get the loader path
+		lpf="$(GetEfiLoaderPath)"
+		if [ -n "$lpf" ]; then
+			Report "Loader path: $lpf"
 		fi
 	fi
+else
+	Report "Cannot get the boot method."
 fi
+
 if [ -z "$EFIP" ] && [ -z "$BIOSD" ]; then
 	Report "Found no partition containing a loader."
 	Report "Nothing seems updatable."
