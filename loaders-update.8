@@ -51,7 +51,7 @@ So, in case of bad or no detection of your disk(s), you can try this option.
 .It Fl n
 Don't backup the BIOS loaders.
 .It Fl o Ar Save_BIOS_loaders_dir
-Specify the directory where to save the BIOS loaders. Defaut: /root.
+Specify the directory where to save the BIOS loaders. Default: /root.
 .It Fl q
 Quiet mode. No output to the console.
 .It Fl m Ar Efi_mount_dir
@@ -106,7 +106,7 @@ In case you want to remove this feature:
 .It
 .Dl # efibootmgr -v | grep LU-FailSafe
 .Pp
-You will see a line begining by Bootxxxx, note the xxxx. then:
+You will see a line beginning by Bootxxxx, note the xxxx. then:
 .It
 .Dl # efibootmgr -b xxxx -B
 .Pp
