@@ -17,9 +17,9 @@ It has the following options:
 * option `-e` scan only EFI loaders (exclude BIOS loaders).
 * option `-f` won't check the freebsd-boot partition content for BIOS loaders update.
 * option `-g` force to use 'gpart show' for disk detection.
-* option `-o`  Specify the directory where to save the BIOS loaders.
+* option `-o`  specify the directory where to save the BIOS loaders.
   * default: `/root`
-* option `-n` Don't backup the BIOS loaders.
+* option `-n` don't backup the BIOS loaders.
 * option `-q` quiet mode. No output to the console.
 * option `-m` to specify the mount point of the ESP.
   * default: `/mnt`
