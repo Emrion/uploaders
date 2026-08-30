@@ -1,4 +1,4 @@
-.Dd June 1, 2026
+.Dd August 10, 2026
 .Dt Loaders-update 8
 .Os
 .Sh NAME
@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .Nm loaders-update
 .Sy mode
-.Op -befgqry
+.Op -befgnoqry
 .Op -m Ar Efi_mount_dir
 .Op -s Ar loaders_source_dir
 .Sh DESCRIPTION
@@ -22,6 +22,16 @@ You need to be root.
 .Pp
 .D1 Cm show-me
 This mode just shows the commands to type, it changes nothing.
+.Pp
+.D1 Cm make-efi-failsafe
+This mode, or rather command, allows to implant the EFI failsafe feature in the machine. You need to be root.
+It creates an EFI boot var (labeled LU-FailSafe) that points to LU-old-loader.efi in the main ESP.
+At each EFI loaders update with the
+.Cm shoot-me
+mode, the previous loader is saved to LU-old-loader.efi.
+In case of failure of the new EFI loader for starting, you can call the boot menu and choose LU-FailSafe entry.
+.It
+Be aware that the manipulation of EFI vars can sometimes lead to some damages with bogus EFI firmware (typically on old machines).
 .Sh OPTIONS
 These options are available:
 .Bl -tag -width ".Cm activate"
@@ -38,6 +48,10 @@ This option cannot be chosen at the same time than -r.
 Use 'gpart show' instead of 'sysctl kern.disks' in order to list the available disks.
 In some circumstances, the output of kern.disks doesn't match the geoms that 'gpart' knows.
 So, in case of bad or no detection of your disk(s), you can try this option.
+.It Fl n
+Don't backup the BIOS loaders.
+.It Fl o Ar Save_BIOS_loaders_dir
+Specify the directory where to save the BIOS loaders. Default: /root.
 .It Fl q
 Quiet mode. No output to the console.
 .It Fl m Ar Efi_mount_dir
@@ -73,20 +87,56 @@ Answer yes for shoot-me mode. Use with caution!
 If not coherent, don't examine its content (unless -r or -f option is specified).
 .It
 ø If a loader is already up-to-date, neither suggest nor attempt an update.
+.It
+ø Systematically save the current BIOS loaders before to update them (unless option -n is selected).
+.It
+ø If the EFI FailSafe feature is implanted, save the previous EFI loader before to update.
 .El
 .Sh LIMITATIONS
 .It
-ø Work only on AMD64 and ARM64 architectures.
+ø Work only on AMD64 or ARM64 architectures.
 .It
 ø Can only examine disks with GUID Partition Table (GPT).
 .It
 ø Check only the first freebsd-boot and efi partition per disk.
 .El
+.Sh HOW TO REMOVE THE EFI FAILSAFE FEATURE
+.Pp
+In case you want to remove this feature:
+.It
+.Dl # efibootmgr -v | grep LU-FailSafe
+.Pp
+You will see a line beginning by Bootxxxx, note the xxxx. then:
+.It
+.Dl # efibootmgr -b xxxx -B
+.Pp
+At this point, the feature is only partially removed. The EFI loader LU-old-loader.efi is still present in the ESP. When you will invoke the 
+.Cm shoot-me
+mode, the previous loader will still be saved to LU-old-loader.efi. If you want to prevent this backup, mount your ESP (if not already mounted) and simply delete LU-old-loader.efi.
+.El
+.Sh HOW BIOS LOADERS ARE SAVED
+.It
+By default you will find them in /root, but you can change that with the -o option. Only the loaders that have been actually updated are saved. Their names are:
+.Dl pmbr.geom and [gptzfsboot|gptboot].part_name
+.Pp
+Where geom is the name of the disk (e.g. ada0) for pmbr and part_name, the partition name for gptzfsboot/gptboot (e.g. ada0p2).
+.It
+If you need to downgrade a given geom:
+.It
+.Dl # gpart bootcode -b pmbr.geom geom
+.It
+and/or 
+.It
+.Dl # gpart bootcode -p [gptzfsboot|gptboot].part_name -i index diskname
+.It
+(In the example, diskname is ada0, index is 2)
 .Sh SEE ALSO
 .Xr uefi 8 ,
 .Xr gpart 8 ,
 .Xr gptboot 8 ,
-.Xr gptzfsboot 8
+.Xr gptzfsboot 8 ,
+.Xr efibootmgr 8 ,
+.Xr efivar 8
 .El
 .Sh COMMENTS
 This utility comes to fill a void in the FreeBSD upgrading.
