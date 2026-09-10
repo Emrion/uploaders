@@ -33,6 +33,7 @@ readonly SMN="show-me"
 readonly IMN="make-efi-failsafe"
 # Loaders file names
 readonly EFILOADER="loader.efi"
+readonly EFILOADER32="loader_ia32.efi"
 readonly FILEPREFIX="LU-"
 readonly SAVEDEFILOADER="${FILEPREFIX}old-loader.efi"
 readonly FAILSAFELABEL="${FILEPREFIX}FailSafe"
@@ -57,6 +58,8 @@ AutoYes=false	# Automatic Yes in shoot-me mode
 OnlyEFI=false	# Scan only EFI loaders
 OnlyBIOS=false	# Scan only BIOS loaders
 BIOSbackup=true # The BIOS loaders will be saved before change
+L32once=false
+L64one=false
 
 
 Usage()
@@ -173,41 +176,57 @@ CheckSourceFile()
 # CopyEfiLoader SourceFile TargetFile
 CopyEfiLoader()
 {
-	local SourceFile TargetFile TFmd5
+	local SourceFile TargetFile TFmd5 tfr Smd5 L32
 	# global FBSDL: is a loader found in TargetPartition?
-	SourceFile="$1"
-	TargetFile="$2"
+	TargetFile="$1"
 
 	# Checks if it's an executable efi file
-	if [ -z "$(file -b "$TargetFile" | grep PE32+)" ]; then
+	tfr="$(file -b "$TargetFile")"
+	if [ -z "$(echo "$tfr" | grep PE32+)" ]; then
 		return
 	fi
 	# Checks if the file is a FreeBSD loader
 	if [ "$(grep -c FreeBSD "$TargetFile")" -gt 0 ]; then
+		if uefisign -V "$TargetFile" 1>/dev/null 2>&1; then
+			Report "Loader $TargetFile is signed (secure boot). Skiped."
+			return
+		fi
 		FBSDL=true			
 		TFmd5="$(md5 -q "$TargetFile")"
-		if  [ "$TFmd5" = "$Efimd5" ]; then
+		# Determine if it is a 32 or a 64 bits loader
+		if [ -z "$(echo "$tfr"|grep i386)" ]; then
+			L32=false
+			L64once=true
+			Smd5="$Efimd5"
+			SourceFile="$SLD/$EFILOADER"
+		else
+			L32=true
+			L32once=true
+			Smd5="$Efi32md5"
+			SourceFile="$SLD/$EFILOADER32"	
+		fi
+		if  [ "$TFmd5" = "$Smd5" ]; then
 			Report "EFI loader $TargetFile is up-to-date."
 		else
 			# Save this loader in case we need it for SAVEDEFILOADER
-			if ($SM); then
+			if ($SM); then 
 				cp "$TargetFile" "$TMPFILE"
 			fi
+			
 			PossiblyRun "cp $SourceFile $TargetFile" UpEFI mEFI
 		fi
 	fi
 }
 
-# EfiUpdate SourceFile TargetPartition MountedDest
+# EfiUpdate TargetPartition MountedDest
 EfiUpdate()
 {
 	local SourceFile TargetPartition MountedDest
 	local mt cmd e lf f ptol
 	# global FBSDL: is a loader found in TargetPartition?
 
-	SourceFile="$1"
-	TargetPartition="$2"
-	MountedDest="$3"
+	TargetPartition="$1"
+	MountedDest="$2"
 	mt=false
 
 	# If $MountedDest is empty, the target partition isn't mounted, we must mount it
@@ -235,7 +254,7 @@ EfiUpdate()
 	for f in $lf; do
 		# Test all .efi files except the saved efiloader.
 		if [ -z "$(echo "$f" | grep "/$SAVEDEFILOADER")" ]; then
-			CopyEfiLoader "$SourceFile" "$f"
+			CopyEfiLoader "$f"
 		else
 			ptol="$f"
 		fi
@@ -243,12 +262,20 @@ EfiUpdate()
 	if ! ("$FBSDL"); then
 		Report "There is no FreeBSD loader in $TargetPartition"
 	fi
+	if ($L32once && $L64once); then
+		Report
+		Report "WARNING: you have a mix of 64 and 32 bits EFI loaders."
+	fi
 	if [ -n "$ptol" ]; then
 		# If an efi loader has been updated and the SAVEDEFILOADER is present
 		# Copy the previous saved loader to old loader.
 		if [ $mEFI -gt $Imefi ]; then
-			Report "Saving old EFI loader in $ptol."
-			cp "$TMPFILE" "$ptol"
+			if ($L32once && $L64once); then
+				Report "64 & 32 mix: as a result, cannot save the old loader."
+			else
+				Report "Saving old EFI loader in $ptol."
+				cp "$TMPFILE" "$ptol"
+			fi
 		else
 			Report "The EFI fail safe feature seems to be enabled."
 		fi
@@ -801,7 +828,9 @@ fi
 if [ -n "$EFIP" ]; then
 	Report "One or more efi partition(s) have been found."
 	CheckSourceFile "$SLD/$EFILOADER"
+	CheckSourceFile "$SLD/$EFILOADER32"
 	Efimd5="$(md5 -q "$SLD/$EFILOADER")"
+	Efi32md5="$(md5 -q "$SLD/$EFILOADER32")"
 	Report
 	if [ -n "$em" ]; then
 			Err=$((Err+1))
@@ -814,7 +843,7 @@ if [ -n "$EFIP" ]; then
 			if [ -n "$m" ]; then
 				Report "Efi partition $p is already mounted in $m."
 			fi	
-			EfiUpdate "$SLD/$EFILOADER" "$p" "$m"
+			EfiUpdate "$p" "$m"
 		done
 	fi
 Report
