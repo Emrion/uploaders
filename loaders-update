@@ -59,7 +59,7 @@ OnlyEFI=false	# Scan only EFI loaders
 OnlyBIOS=false	# Scan only BIOS loaders
 BIOSbackup=true # The BIOS loaders will be saved before change
 L32once=false
-L64one=false
+L64once=false
 
 
 Usage()
