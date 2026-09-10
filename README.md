@@ -61,8 +61,10 @@ You may also leave the loaders as is, but in case of zfs pool upgrading, the OS 
 - for a freebsd-boot partition, compare its bootcode with the root file system
   - if not coherent, don't change the content of this freebsd-boot partition 
 - if a detected loader is already up-to-date, neither suggest nor attempt an update
+- Check if an EFI loader is 32 bits and update it with the suited loader (loader_ia32.efi)
+- Check if an EFI loaser is signed (secure boot) and if it is, don't touch it
 - Systematically save the current BIOS loaders before to update them (unless option -n is selected)
-- If the EFI FailSafe feature is implanted, save the previous EFI loader before to update.
+- If the EFI FailSafe feature is implanted, save the previous EFI loader before to update
   
 ### Out of scope
 
@@ -76,7 +78,8 @@ You may also leave the loaders as is, but in case of zfs pool upgrading, the OS 
 
 ### About the EFI Fail Safe feature
 
-Allows to implant the EFI Fail Safe feature in the machine. It creates an EFI boot var (labeled `LU-FailSafe`) that points to `LU-old-loader.efi` in the main ESP.  At each EFI loaders update with the `shoot-me` mode, the previous loader is saved to `LU-old-loader.efi`.  In case of failure of the new EFI loader for starting, you can call the boot menu and choose `LU-FailSafe` entry.  
+It creates an EFI boot var (labeled `LU-FailSafe`) that points to `LU-old-loader.efi` in the main ESP.  At each EFI loaders update with the `shoot-me` mode, the previous loader is saved to `LU-old-loader.efi`.  In case of failure of the new EFI loader for starting, you can call the boot menu and choose `LU-FailSafe` entry.  
+Note that in case of a mix of 64 & 32 bits loaders, nothing is saved in `LU-old-loader.efi` (a warning is diplayed).
 
 **Be aware that the manipulation of EFI vars can sometimes lead to some damages with bogus EFI firmware (typically on old machines).**
 
