@@ -59,13 +59,11 @@ OnlyEFI=false	# Scan only EFI loaders
 OnlyBIOS=false	# Scan only BIOS loaders
 BIOSbackup=true # The BIOS loaders will be saved before change
 L32once=false
-L64once=false
+L64one=false
 
 
 Usage()
 {
-	local exn
-	exn=$(basename "$0")
 	echo "$Version"
 	echo "Usage: $exn mode [-befgnoqry] [-m efi_mount_dir] [-s loaders_source_dir]"
 	echo "mode can be one of:"
@@ -533,6 +531,7 @@ GetEfiMount() # Check if partition $1 is already mounted
 # To avoid some errors related to grep
 unset GREP_OPTIONS
 
+exn=$(basename "$0")
 Mode="$1"
 IM=false
 SM=false
@@ -837,6 +836,12 @@ if [ -n "$EFIP" ]; then
 			Report "Cannot work on EFI loaders because 'mount -p' doesn't work."
 			Report "-> $em"
 	else
+		# Check if uefisign is present
+		if [ -z "$(which uefisign)" ]; then
+			Report "Warning: cannot find uefisign executable."
+			Report "If you have secure boot enabled, don't use $exn."
+			Report
+		fi
 		for p in $EFIP; do
 			Report "Examining $p..."
 			m="$(GetEfiMount "$p")"
