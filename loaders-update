@@ -171,7 +171,7 @@ CheckSourceFile()
 	fi
 }
 
-# CopyEfiLoader SourceFile TargetFile
+# CopyEfiLoader TargetFile
 CopyEfiLoader()
 {
 	local SourceFile TargetFile TFmd5 tfr Smd5 L32
@@ -179,6 +179,7 @@ CopyEfiLoader()
 	TargetFile="$1"
 
 	# Checks if it's an executable efi file
+
 	tfr="$(file -b "$TargetFile")"
 	if [ -z "$(echo "$tfr" | grep PE32+)" ]; then
 		return
@@ -192,14 +193,22 @@ CopyEfiLoader()
 		FBSDL=true			
 		TFmd5="$(md5 -q "$TargetFile")"
 		# Determine if it is a 32 or a 64 bits loader
-		if [ -z "$(echo "$tfr"|grep i386)" ]; then
+		if [ -z "$(echo "$tfr"|grep 386)" ]; then
 			L32=false
 			L64once=true
 			Smd5="$Efimd5"
 			SourceFile="$SLD/$EFILOADER"
 		else
-			L32=true
 			L32once=true
+			if [ "$Efi32md5" = "0" ]; then
+				Report
+				Report "Cannot update the 32 bits EFI loader:"
+				Report "$TargetFile"
+				Report "$SLD/$EFILOADER32 is absent."
+				Ferr=$((Ferr+1))
+				return
+			fi
+			L32=true
 			Smd5="$Efi32md5"
 			SourceFile="$SLD/$EFILOADER32"	
 		fi
@@ -827,9 +836,14 @@ fi
 if [ -n "$EFIP" ]; then
 	Report "One or more efi partition(s) have been found."
 	CheckSourceFile "$SLD/$EFILOADER"
-	CheckSourceFile "$SLD/$EFILOADER32"
+	# The 32 bits EFI loaders don't exist on all FreeBSD versions
+	if [ -e "$SLD/$EFILOADER32" ]; then
+		Efi32md5="$(md5 -q "$SLD/$EFILOADER32")"
+	else
+		Efi32md5=0
+	fi
 	Efimd5="$(md5 -q "$SLD/$EFILOADER")"
-	Efi32md5="$(md5 -q "$SLD/$EFILOADER32")"
+
 	Report
 	if [ -n "$em" ]; then
 			Err=$((Err+1))
