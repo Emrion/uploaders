@@ -174,7 +174,7 @@ CheckSourceFile()
 # CopyEfiLoader TargetFile
 CopyEfiLoader()
 {
-	local SourceFile TargetFile TFmd5 tfr Smd5 L32
+	local SourceFile TargetFile TFmd5 tfr Smd5
 	# global FBSDL: is a loader found in TargetPartition?
 	TargetFile="$1"
 
@@ -194,7 +194,6 @@ CopyEfiLoader()
 		TFmd5="$(md5 -q "$TargetFile")"
 		# Determine if it is a 32 or a 64 bits loader
 		if [ -z "$(echo "$tfr"|grep 386)" ]; then
-			L32=false
 			L64once=true
 			Smd5="$Efimd5"
 			SourceFile="$SLD/$EFILOADER"
@@ -208,7 +207,6 @@ CopyEfiLoader()
 				Ferr=$((Ferr+1))
 				return
 			fi
-			L32=true
 			Smd5="$Efi32md5"
 			SourceFile="$SLD/$EFILOADER32"	
 		fi
@@ -289,7 +287,7 @@ EfiUpdate()
 	else
 		Report "The EFI fail safe feature isn't enabled."
 	fi
-	unset ptol
+
 	rm -f "$TMPFILE"
 	if ($mt); then
 		cmd="umount $MountedDest"
