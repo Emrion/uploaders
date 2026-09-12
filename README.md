@@ -62,7 +62,7 @@ You may also leave the loaders as is, but in case of zfs pool upgrading, the OS 
   - if not coherent, don't change the content of this freebsd-boot partition 
 - if a detected loader is already up-to-date, neither suggest nor attempt an update
 - Check if an EFI loader is 32 bits and update it with the suited loader (loader_ia32.efi)
-- Check if an EFI loaser is signed (secure boot) and if it is, don't touch it
+- Check if an EFI loader is signed (secure boot) and if it is, don't touch it
 - Systematically save the current BIOS loaders before to update them (unless option -n is selected)
 - If the EFI FailSafe feature is implanted, save the previous EFI loader before to update
   
