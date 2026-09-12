@@ -60,6 +60,7 @@ OnlyBIOS=false	# Scan only BIOS loaders
 BIOSbackup=true # The BIOS loaders will be saved before change
 L32once=false
 L64once=false
+EfiSaved=false
 
 
 Usage()
@@ -227,7 +228,7 @@ CopyEfiLoader()
 EfiUpdate()
 {
 	local SourceFile TargetPartition MountedDest
-	local mt cmd e lf f ptol
+	local mt cmd e lf f
 	# global FBSDL: is a loader found in TargetPartition?
 
 	TargetPartition="$1"
@@ -267,25 +268,19 @@ EfiUpdate()
 	if ! ("$FBSDL"); then
 		Report "There is no FreeBSD loader in $TargetPartition"
 	fi
-	if ($L32once && $L64once); then
-		Report
-		Report "WARNING: you have a mix of 64 and 32 bits EFI loaders."
-	fi
 	if [ -n "$ptol" ]; then
 		# If an efi loader has been updated and the SAVEDEFILOADER is present
 		# Copy the previous saved loader to old loader.
-		if [ $mEFI -gt $Imefi ]; then
+		if [ $mEFI -gt $Imefi ] && ! ($EfiSaved); then
+			EfiSaved=true
 			if ($L32once && $L64once); then
-				Report "64 & 32 mix: as a result, cannot save the old loader."
+				Report "64 & 32 bits mix EFI loaders: cannot save the old loader."
+				Ferr=$((Ferr+1))
 			else
 				Report "Saving old EFI loader in $ptol."
 				cp "$TMPFILE" "$ptol"
 			fi
-		else
-			Report "The EFI fail safe feature seems to be enabled."
 		fi
-	else
-		Report "The EFI fail safe feature isn't enabled."
 	fi
 
 	rm -f "$TMPFILE"
@@ -815,8 +810,11 @@ if ($IM); then
 	Report "loaders-update EFI fail safe feature implanted."
 	Report "Check with efibootmgr -v before and after reboot that all is ok."
 	return 0 
-fi	
+fi
 
+#---------------------------------------------------------
+# Operations in show-me or shoot-me modes
+#---------------------------------------------------------	
 Err=0      # Errors that may be resolved by running this script as root
 Ferr=0     # Other errors
 UpEFI=0    # Updatable EFI loaders
@@ -862,6 +860,18 @@ if [ -n "$EFIP" ]; then
 			fi	
 			EfiUpdate "$p" "$m"
 		done
+	fi
+	if [ -n "$ptol" ]; then
+		Report "The Efi fail safe feature seems to be enabled."
+	else
+		Report "The Efi fail safe feature isn't enabled."
+	fi
+	if ($L32once && $L64once); then
+		Report
+		Report "WARNING: you have a mix of 64 and 32 bits EFI loaders."
+		if [ -n "$ptol" ]; then
+			Report "As a result, the Efi fail safe feature won't work."
+		fi
 	fi
 Report
 fi
