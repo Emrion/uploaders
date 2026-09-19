@@ -217,8 +217,7 @@ CopyEfiLoader()
 			# Save this loader in case we need it for SAVEDEFILOADER
 			if ($SM); then 
 				cp "$TargetFile" "$TMPFILE"
-			fi
-			
+			fi	
 			PossiblyRun "cp $SourceFile $TargetFile" UpEFI mEFI
 		fi
 	fi
@@ -228,7 +227,7 @@ CopyEfiLoader()
 EfiUpdate()
 {
 	local SourceFile TargetPartition MountedDest
-	local mt cmd e lf f
+	local mt cmd e lf f ptol
 	# global FBSDL: is a loader found in TargetPartition?
 
 	TargetPartition="$1"
