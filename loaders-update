@@ -647,7 +647,11 @@ else
 	fi
 fi
 if [ -z "$LD" ]; then
-	Report "No disk has been detected. Exiting."
+	if ! ($USE_KERNDISK); then
+		Report "No GPT disk has been detected. Exiting."
+	else
+		Report "No disk has been detected. Exiting."
+	fi
 	Report
 	return 1
 fi
