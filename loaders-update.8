@@ -1,4 +1,4 @@
-.Dd August 10, 2026
+.Dd September 10, 2026
 .Dt Loaders-update 8
 .Os
 .Sh NAME
@@ -29,6 +29,7 @@ It creates an EFI boot var (labeled LU-FailSafe) that points to LU-old-loader.ef
 At each EFI loaders update with the
 .Cm shoot-me
 mode, the previous loader is saved to LU-old-loader.efi.
+Note that in case you have a mix of 64 & 32 bits EFI loaders, nothing is saved to LU-old-loader.efi (a warning is displayed).
 In case of failure of the new EFI loader for starting, you can call the boot menu and choose LU-FailSafe entry.
 .It
 Be aware that the manipulation of EFI vars can sometimes lead to some damages with bogus EFI firmware (typically on old machines).
@@ -83,6 +84,10 @@ Answer yes for shoot-me mode. Use with caution!
 .It
 ø Recognize FreeBSD EFI loaders and examine only them.
 .It
+ø Identify a 32 bits EFI loader and update it with the right loader (loader_ia32.efi).
+.It
+ø Check if an EFI loader in signed (secure boot) and if it is, don't check it.
+.It
 ø Check each freebsd-boot partition, compare its bootcode with the root file system.
 If not coherent, don't examine its content (unless -r or -f option is specified).
 .It
@@ -136,7 +141,8 @@ and/or
 .Xr gptboot 8 ,
 .Xr gptzfsboot 8 ,
 .Xr efibootmgr 8 ,
-.Xr efivar 8
+.Xr efivar 8 ,
+.Xr efisign 8
 .El
 .Sh COMMENTS
 This utility comes to fill a void in the FreeBSD upgrading.
