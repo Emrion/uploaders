@@ -40,8 +40,8 @@ readonly FAILSAFELABEL="${FILEPREFIX}FailSafe"
 readonly PMBR="pmbr"
 readonly GPTBOOT="gptboot"
 readonly GPTZFSBOOT="gptzfsboot"
-readonly EVLP="LoaderPath" # Name of the efi var for booted file
-readonly EBO="BootOrder"
+readonly EVLP="\-LoaderPath" # Name of the efi var for booted file
+readonly EBO="\-BootOrder"
 readonly TMPFILE="/tmp/${FILEPREFIX}data"
 
 EMD="/mnt" # Mount point for efi partitions
